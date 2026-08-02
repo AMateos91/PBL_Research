@@ -11,6 +11,8 @@ from ..utils.types import TimeRange
 class Satellite(EarthData):
 
     SHORT_NAME = ""
+    PLATFORM = ""
+    SENSOR = ""
 
     def __init__(self):
 
