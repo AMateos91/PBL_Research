@@ -6,9 +6,9 @@ import earthaccess
 
 from ..exceptions import AuthenticationError
 from ..logger import Logger
+from .base import Acquisition
 
-
-class EarthData:
+class EarthData(Acquisition):
 
     def __init__(self):
 
