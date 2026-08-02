@@ -6,6 +6,8 @@ from .satellite import Satellite
 class Landsat(Satellite):
 
     SHORT_NAME = "LANDSAT_OT_C2_L2"
+    PLATFORM = "Landsat-8/9"
+    SENSOR = "OLI/TIRS"
 
     @staticmethod
     def bands():
