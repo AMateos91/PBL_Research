@@ -6,6 +6,8 @@ from .satellite import Satellite
 class MODIS(Satellite):
 
     SHORT_NAME = "MOD09GA"
+    PLATFORM = "Terra"
+    SENSOR = "MODIS"
 
     @staticmethod
     def bands():
