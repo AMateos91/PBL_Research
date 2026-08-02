@@ -6,6 +6,8 @@ from .satellite import Satellite
 class VIIRS(Satellite):
 
     SHORT_NAME = "VNP09GA"
+    PLATFORM = "Suomi NPP"
+    SENSOR = "VIIRS"
 
     @staticmethod
     def bands():
