@@ -6,6 +6,8 @@ from .satellite import Satellite
 class HLS(Satellite):
 
     SHORT_NAME = "HLSL30"
+    PLATFORM = "Landsat-8/9 + Sentinel-2"
+    SENSOR = "OLI/TIRS + MSI"
 
     @staticmethod
     def bands():
