@@ -1,4 +1,22 @@
 from enum import StrEnum
+from enum import Enum
+
+
+class CRS(Enum):
+
+    WGS84 = "EPSG:4326"
+
+    WEB_MERCATOR = "EPSG:3857"
+
+    UTM_15N = "EPSG:32615"
+
+    UTM_16N = "EPSG:32616"
+
+    UTM_17N = "EPSG:32617"
+
+    UTM_18N = "EPSG:32618"
+
+    UTM_19N = "EPSG:32619"
 
 
 class Dataset(StrEnum):
