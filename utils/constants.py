@@ -95,6 +95,33 @@ class Variable(Enum):
     ALBEDO = "albedo"
 
     THERMAL = "thermal"
+
+    BLUE = "blue"
+    GREEN = "green"
+    RED = "red"
+    NIR = "nir"
+    SWIR = "swir"
+    SWIR2 = "swir2"
+
+    NDVI = "ndvi"
+    EVI = "evi"
+    SAVI = "savi"
+
+    NDWI = "ndwi"
+    NDMI = "ndmi"
+    MSI = "msi"
+
+    NDBI = "ndbi"
+
+    SURFACE_TEMPERATURE = "surface_temperature"
+
+    TEMPERATURE_ANOMALY = "temperature_anomaly"
+
+    ALBEDO = "albedo"
+
+    ELEVATION = "elevation"
+    SLOPE = "slope"
+    ASPECT = "aspect"
     
 
 class Dataset(StrEnum):
