@@ -149,6 +149,11 @@ class Variable(Enum):
 
     LATENT_HEAT_FLUX = "latent_heat_flux"
 
+    TEMPERATURE_GRADIENT = "temperature_gradient"
+
+    BOWEN_RATIO = "bowen_ratio"
+
+    THERMAL_ADVECTION_PROXY = "thermal_advection_proxy"
 
 class TextureMetric(Enum):
 
