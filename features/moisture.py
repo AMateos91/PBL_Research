@@ -17,6 +17,17 @@ class Moisture(Feature):
         variables = dataset.data_vars
 
         if {
+            "green",
+            "nir",
+        }.issubset(variables):
+
+            output["ndwi"] = (
+                dataset["green"] - dataset["nir"]
+            ) / (
+                dataset["green"] + dataset["nir"] + 1e-10
+            )
+
+        if {
             "nir",
             "swir",
         }.issubset(variables):
@@ -27,15 +38,11 @@ class Moisture(Feature):
                 dataset["nir"] + dataset["swir"] + 1e-10
             )
 
-        if {
-            "green",
-            "nir",
-        }.issubset(variables):
-
-            output["ndwi"] = (
-                dataset["green"] - dataset["nir"]
-            ) / (
-                dataset["green"] + dataset["nir"] + 1e-10
+            output["msi"] = (
+                dataset["swir"]
+                / (
+                    dataset["nir"] + 1e-10
+                )
             )
 
         output.attrs.update(
