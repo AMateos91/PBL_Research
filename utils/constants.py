@@ -41,7 +41,16 @@ class TemporalMethod(Enum):
     PAD = "pad"
 
     BACKFILL = "backfill"
+    
 
+class NormalizationMethod(Enum):
+
+    MINMAX = "minmax"
+
+    ZSCORE = "zscore"
+
+    NONE = "none"
+    
 
 class Dataset(StrEnum):
 
