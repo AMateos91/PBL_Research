@@ -122,6 +122,21 @@ class Variable(Enum):
     ELEVATION = "elevation"
     SLOPE = "slope"
     ASPECT = "aspect"
+
+
+class TextureMetric(Enum):
+
+    CONTRAST = "contrast"
+
+    DISSIMILARITY = "dissimilarity"
+
+    HOMOGENEITY = "homogeneity"
+
+    ENERGY = "energy"
+
+    CORRELATION = "correlation"
+
+    ASM = "ASM"
     
 
 class Dataset(StrEnum):
