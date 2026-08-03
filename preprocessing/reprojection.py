@@ -6,15 +6,17 @@ import rioxarray
 import xarray as xr
 
 from .base import Preprocessing
+from ..utils.constants import CRS
+from ..utils.constants import ResamplingMethod
 
 
 class Reprojection(Preprocessing):
 
     def __init__(
         self,
-        crs: str = "EPSG:4326",
+        crs: str = CRS.WGS84.value,
         resolution: float | None = None,
-        resampling: str = "nearest",
+        resampling: str = ResamplingMethod.NEAREST.value,
     ):
 
         super().__init__()
