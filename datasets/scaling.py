@@ -7,6 +7,7 @@ from sklearn.preprocessing import (
     RobustScaler,
     StandardScaler,
 )
+from ..utils.constants import ScalingMethod
 
 
 class Scaling:
@@ -18,13 +19,13 @@ class Scaling:
     }
 
     def __init__(
-        self,
-        method: str = "standard",
-    ):
+    self,
+    method: ScalingMethod = ScalingMethod.STANDARD,
+):
 
-        self.scaler = self._SCALERS[
-            method.lower()
-        ]()
+    self.scaler = self._SCALERS[
+        method.value
+    ]()
 
     def fit_transform(
         self,
