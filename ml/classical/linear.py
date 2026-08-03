@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-import joblib
 import numpy as np
 
 from sklearn.linear_model import LinearRegression
 
 from ..base import Model
+from ...utils.serialization import (
+    load_model,
+    save_model,
+)
 
 
 class LinearRegressionModel(Model):
@@ -13,10 +16,10 @@ class LinearRegressionModel(Model):
     def __init__(
         self,
         **kwargs,
-    ):
+    ) -> None:
 
         self.model = LinearRegression(
-            **kwargs
+            **kwargs,
         )
 
     def fit(
@@ -38,7 +41,7 @@ class LinearRegressionModel(Model):
     ) -> np.ndarray:
 
         return self.model.predict(
-            x
+            x,
         )
 
     def save(
@@ -46,7 +49,7 @@ class LinearRegressionModel(Model):
         path: str,
     ) -> None:
 
-        joblib.dump(
+        save_model(
             self.model,
             path,
         )
@@ -59,8 +62,8 @@ class LinearRegressionModel(Model):
 
         instance = cls()
 
-        instance.model = joblib.load(
-            path
+        instance.model = load_model(
+            path,
         )
 
         return instance
