@@ -2,6 +2,25 @@ from enum import StrEnum
 from enum import Enum
 
 
+class Band(Enum):
+
+    BLUE = "blue"
+
+    GREEN = "green"
+
+    RED = "red"
+
+    RED_EDGE = "red_edge"
+
+    NIR = "nir"
+
+    SWIR = "swir"
+
+    SWIR2 = "swir2"
+
+    THERMAL = "thermal"
+
+
 class CRS(Enum):
 
     WGS84 = "EPSG:4326"
