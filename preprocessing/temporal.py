@@ -4,16 +4,16 @@ import pandas as pd
 import xarray as xr
 
 from .base import Preprocessing
-
+from ..utils.constants import TemporalMethod
 
 class Temporal(Preprocessing):
 
-    def __init__(
-        self,
-        frequency: str | None = None,
-        method: str = "nearest",
-        tolerance: str | None = None,
-    ):
+def __init__(
+    self,
+    frequency: str | None = None,
+    method: str = TemporalMethod.NEAREST.value,
+    tolerance: str | None = None,
+):
 
         super().__init__()
 
