@@ -6,13 +6,15 @@ import xarray as xr
 
 from .base import Preprocessing
 
+from ..utils.constants import ResamplingMethod
+
 
 class Resampling(Preprocessing):
 
     def __init__(
         self,
         resolution: float,
-        resampling: str = "nearest",
+        resampling: str = ResamplingMethod.NEAREST.value,
     ):
 
         super().__init__()
