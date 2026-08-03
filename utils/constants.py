@@ -82,6 +82,19 @@ class Compatibility(Enum):
     NO_CONFLICTS = "no_conflicts"
 
     BROADCAST_EQUALS = "broadcast_equals"
+
+
+class Variable(Enum):
+
+    ELEVATION = "elevation"
+
+    SLOPE = "slope"
+
+    ASPECT = "aspect"
+
+    ALBEDO = "albedo"
+
+    THERMAL = "thermal"
     
 
 class Dataset(StrEnum):
