@@ -52,6 +52,19 @@ class NormalizationMethod(Enum):
     NONE = "none"
     
 
+class Compatibility(Enum):
+
+    OVERRIDE = "override"
+
+    IDENTICAL = "identical"
+
+    EQUALS = "equals"
+
+    NO_CONFLICTS = "no_conflicts"
+
+    BROADCAST_EQUALS = "broadcast_equals"
+    
+
 class Dataset(StrEnum):
 
     HLSL30 = "HLSL30"
