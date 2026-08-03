@@ -4,12 +4,14 @@ import xarray as xr
 
 from .base import Preprocessing
 
+from ..utils.constants import Compatibility
+
 
 class Stacking(Preprocessing):
 
     def __init__(
         self,
-        compat: str = "override",
+        compat: str = Compatibility.OVERRIDE.value
     ):
 
         super().__init__()
@@ -18,7 +20,7 @@ class Stacking(Preprocessing):
 
     def process(
         self,
-        *datasets: xr.Dataset,
+        *datasets: xr.Dataset
     ) -> xr.Dataset:
 
         if len(datasets) == 0:
