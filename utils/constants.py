@@ -34,6 +34,15 @@ class ResamplingMethod(Enum):
     LANCZOS = "lanczos"
 
 
+class TemporalMethod(Enum):
+
+    NEAREST = "nearest"
+
+    PAD = "pad"
+
+    BACKFILL = "backfill"
+
+
 class Dataset(StrEnum):
 
     HLSL30 = "HLSL30"
