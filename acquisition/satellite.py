@@ -91,6 +91,14 @@ class Satellite(EarthData):
     def bands() -> dict[str, str]:
         ...
 
+    def _rename_bands(
+    self,
+    dataset: xr.Dataset,
+    mapping: dict[str, str],
+) -> xr.Dataset:
+
+    return dataset.rename(mapping)
+
     @staticmethod
     @abstractmethod
     def qa_band() -> str:
