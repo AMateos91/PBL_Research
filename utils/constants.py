@@ -2,21 +2,6 @@ from enum import StrEnum
 from enum import Enum
 
 
-class ResamplingMethod(Enum):
-
-    NEAREST = "nearest"
-
-    BILINEAR = "bilinear"
-
-    CUBIC = "cubic"
-
-    AVERAGE = "average"
-
-    MODE = "mode"
-
-    LANCZOS = "lanczos"
-
-
 class CRS(Enum):
 
     WGS84 = "EPSG:4326"
@@ -32,6 +17,21 @@ class CRS(Enum):
     UTM_18N = "EPSG:32618"
 
     UTM_19N = "EPSG:32619"
+
+
+class ResamplingMethod(Enum):
+
+    NEAREST = "nearest"
+
+    BILINEAR = "bilinear"
+
+    CUBIC = "cubic"
+
+    AVERAGE = "average"
+
+    MODE = "mode"
+
+    LANCZOS = "lanczos"
 
 
 class Dataset(StrEnum):
