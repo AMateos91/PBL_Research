@@ -53,6 +53,24 @@ class ResamplingMethod(Enum):
     LANCZOS = "lanczos"
 
 
+class ScalingMethod(Enum):
+
+    STANDARD = "standard"
+
+    MINMAX = "minmax"
+
+    ROBUST = "robust"
+
+
+class Framework(Enum):
+
+    NUMPY = "numpy"
+
+    PYTORCH = "pytorch"
+
+    TENSORFLOW = "tensorflow"
+
+
 class TemporalMethod(Enum):
 
     NEAREST = "nearest"
