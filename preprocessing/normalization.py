@@ -4,12 +4,14 @@ import xarray as xr
 
 from .base import Preprocessing
 
+from ..utils.constants import NormalizationMethod
+
 
 class Normalization(Preprocessing):
 
     def __init__(
         self,
-        method: str = "minmax",
+        method: str = NormalizationMethod.MINMAX.value
     ):
 
         super().__init__()
@@ -18,7 +20,7 @@ class Normalization(Preprocessing):
 
     def process(
         self,
-        dataset: xr.Dataset,
+        dataset: xr.Dataset
     ) -> xr.Dataset:
 
         normalized = xr.Dataset()
