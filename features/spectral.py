@@ -17,28 +17,6 @@ class Spectral(Feature):
         variables = dataset.data_vars
 
         if {
-            "green",
-            "nir",
-        }.issubset(variables):
-
-            output["ndwi"] = (
-                dataset["green"] - dataset["nir"]
-            ) / (
-                dataset["green"] + dataset["nir"] + 1e-10
-            )
-
-        if {
-            "nir",
-            "swir",
-        }.issubset(variables):
-
-            output["ndmi"] = (
-                dataset["nir"] - dataset["swir"]
-            ) / (
-                dataset["nir"] + dataset["swir"] + 1e-10
-            )
-
-        if {
             "nir",
             "swir",
         }.issubset(variables):
