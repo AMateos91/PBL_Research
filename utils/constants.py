@@ -123,6 +123,32 @@ class Variable(Enum):
     SLOPE = "slope"
     ASPECT = "aspect"
 
+    U_WIND = "u_wind"
+
+    V_WIND = "v_wind"
+
+    WIND_SPEED = "wind_speed"
+
+    WIND_DIRECTION = "wind_direction"
+
+    AIR_TEMPERATURE = "air_temperature"
+
+    DEW_POINT_TEMPERATURE = "dew_point_temperature"
+
+    RELATIVE_HUMIDITY = "relative_humidity"
+
+    PRESSURE = "pressure"
+
+    VPD = "vpd"
+
+    SHORTWAVE_RADIATION = "shortwave_radiation"
+
+    LONGWAVE_RADIATION = "longwave_radiation"
+
+    SENSIBLE_HEAT_FLUX = "sensible_heat_flux"
+
+    LATENT_HEAT_FLUX = "latent_heat_flux"
+
 
 class TextureMetric(Enum):
 
