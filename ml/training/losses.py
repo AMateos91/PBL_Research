@@ -2,40 +2,42 @@ from __future__ import annotations
 
 import torch.nn as nn
 
+from ...utils.constants import LossFunction
+
 
 class Loss:
 
     _LOSSES = {
 
-        "mse": nn.MSELoss,
+        LossFunction.MSE: nn.MSELoss,
 
-        "mae": nn.L1Loss,
+        LossFunction.MAE: nn.L1Loss,
 
-        "huber": nn.HuberLoss,
+        LossFunction.HUBER: nn.HuberLoss,
 
-        "cross_entropy": nn.CrossEntropyLoss,
+        LossFunction.CROSS_ENTROPY: nn.CrossEntropyLoss,
 
-        "bce": nn.BCELoss,
+        LossFunction.BCE: nn.BCELoss,
 
-        "bce_logits": nn.BCEWithLogitsLoss,
+        LossFunction.BCE_LOGITS: nn.BCEWithLogitsLoss,
 
     }
 
     @classmethod
     def get(
         cls,
-        name: str,
+        loss: LossFunction,
         **kwargs,
     ) -> nn.Module:
 
-        if name not in cls._LOSSES:
+        if loss not in cls._LOSSES:
 
             raise ValueError(
-                f"Unknown loss: {name}"
+                f"Unknown loss function: {loss}"
             )
 
         return cls._LOSSES[
-            name
+            loss
         ](
             **kwargs,
         )
