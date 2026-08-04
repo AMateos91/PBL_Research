@@ -8,6 +8,7 @@ from ..utils.exceptions import AuthenticationError
 from ..utils.logger import Logger
 from .base import Acquisition
 
+
 class EarthData(Acquisition):
 
     def __init__(self):
@@ -16,16 +17,20 @@ class EarthData(Acquisition):
 
         self._authenticated = False
 
+
     @property
     def authenticated(self) -> bool:
 
         return self._authenticated
 
+
     def login(self) -> None:
 
         try:
 
-            earthaccess.login()
+            earthaccess.login(
+                strategy="environment"
+            )
 
             self._authenticated = True
 
@@ -33,11 +38,18 @@ class EarthData(Acquisition):
                 "Earthdata authentication successful."
             )
 
+
         except Exception as exc:
+
+            self.logger.exception(
+                "Earthdata authentication failed."
+            )
 
             raise AuthenticationError(
                 "Unable to authenticate with Earthdata."
             ) from exc
+
+
 
     def search(
         self,
@@ -45,11 +57,15 @@ class EarthData(Acquisition):
     ):
 
         if not self.authenticated:
+
             self.login()
+
 
         return earthaccess.search_data(
             **kwargs
         )
+
+
 
     def download(
         self,
@@ -62,10 +78,12 @@ class EarthData(Acquisition):
             exist_ok=True,
         )
 
+
         files = earthaccess.download(
             results,
             local_path=directory,
         )
+
 
         return [
             Path(file)
