@@ -62,6 +62,19 @@ class ColorMap(Enum):
     CUBEHELIX = "cubehelix"
 
 
+class ExportFormat(Enum):
+
+    GTIFF = "tif"
+    GPKG = "gpkg"
+    GEOJSON = "geojson"
+    SHAPEFILE = "shp"
+    CSV = "csv"
+    XLSX = "xlsx"
+    PARQUET = "parquet"
+    JOBLIB = "joblib"
+    TORCH = "pth"
+    HDF5 = "h5"
+
 class CRS(Enum):
 
     WGS84 = "EPSG:4326"
