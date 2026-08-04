@@ -23,7 +23,7 @@ class Scaling:
     method: ScalingMethod = ScalingMethod.STANDARD,
 ):
 
-    self.scaler = self._SCALERS[
+        self.scaler = self._SCALERS[
         method.value
     ]()
 
