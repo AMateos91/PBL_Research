@@ -215,6 +215,31 @@ class Metric(Enum):
 
     R2 = "r2"
 
+
+class Optimizer(Enum):
+
+    SGD = "sgd"
+
+    ADAM = "adam"
+
+    ADAMW = "adamw"
+
+    RMSPROP = "rmsprop"
+
+
+class Scheduler(Enum):
+
+    STEP = "step"
+
+    MULTISTEP = "multistep"
+
+    EXPONENTIAL = "exponential"
+
+    COSINE = "cosine"
+
+    REDUCE_ON_PLATEAU = "reduce_on_plateau"
+    
+
 class Dataset(StrEnum):
 
     HLSL30 = "HLSL30"
