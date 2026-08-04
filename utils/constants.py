@@ -158,14 +158,6 @@ class Compatibility(Enum):
 
 class Variable(Enum):
 
-    ELEVATION = "elevation"
-
-    SLOPE = "slope"
-
-    ASPECT = "aspect"
-
-    ALBEDO = "albedo"
-
     THERMAL = "thermal"
 
     BLUE = "blue"
