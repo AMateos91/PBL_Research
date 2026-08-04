@@ -207,11 +207,17 @@ class Metric(Enum):
 
     ACCURACY = "accuracy"
 
+    PRECISION = "precision"
+
+    RECALL = "recall"
+
     F1 = "f1"
 
     MAE = "mae"
 
     MSE = "mse"
+
+    RMSE = "rmse"
 
     R2 = "r2"
 
