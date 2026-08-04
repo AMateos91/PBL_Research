@@ -64,3 +64,84 @@ class Trainer:
         )
 
         return loss.item()
+
+    def train(
+        self,
+        train_loader,
+        epochs: int = 1,
+    ) -> None:
+
+        for epoch in range(epochs):
+
+            running_loss = 0.0
+
+            for x, y in train_loader:
+
+                running_loss += self.train_step(
+                    x,
+                    y,
+                )
+
+            running_loss /= len(train_loader)
+
+            print(
+                f"Epoch {epoch + 1}/{epochs} - "
+                f"Loss: {running_loss:.6f}"
+            )
+
+    @torch.no_grad()
+    def validate(
+        self,
+        validation_loader,
+    ) -> float:
+
+        losses = []
+
+        for x, y in validation_loader:
+
+            losses.append(
+                self.validation_step(
+                    x,
+                    y,
+                )
+            )
+
+        return sum(losses) / len(losses)
+
+    def fit(
+        self,
+        train_loader,
+        validation_loader=None,
+        epochs: int = 1,
+    ) -> None:
+
+        for epoch in range(epochs):
+
+            running_loss = 0.0
+
+            for x, y in train_loader:
+
+                running_loss += self.train_step(
+                    x,
+                    y,
+                )
+
+            running_loss /= len(train_loader)
+
+            message = (
+                f"Epoch {epoch + 1}/{epochs} - "
+                f"Train Loss: {running_loss:.6f}"
+            )
+
+            if validation_loader is not None:
+
+                validation_loss = self.validate(
+                    validation_loader,
+                )
+
+                message += (
+                    f" - Validation Loss: "
+                    f"{validation_loss:.6f}"
+                )
+
+            print(message)
