@@ -73,11 +73,13 @@ class EarthData(Acquisition):
         directory: Path,
     ) -> list[Path]:
 
+        if not results:
+    raise ValueError("No Earthdata granules found.")
+
         directory.mkdir(
             parents=True,
             exist_ok=True,
         )
-
 
         files = earthaccess.download(
             results,
@@ -89,5 +91,4 @@ class EarthData(Acquisition):
             Path(file)
             for file in files
         ]
-        if not results:
-    raise ValueError("No Earthdata granules found.")
+       
