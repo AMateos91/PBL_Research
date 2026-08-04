@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import earthaccess
 
 from ..utils.exceptions import AuthenticationError
@@ -34,21 +32,11 @@ class EarthData(Acquisition):
 
             self._authenticated = True
 
-            self.logger.info(
-                "Earthdata authentication successful."
-            )
-
-
         except Exception as exc:
-
-            self.logger.exception(
-                "Earthdata authentication failed."
-            )
 
             raise AuthenticationError(
                 "Unable to authenticate with Earthdata."
             ) from exc
-
 
 
     def search(
@@ -57,38 +45,8 @@ class EarthData(Acquisition):
     ):
 
         if not self.authenticated:
-
             self.login()
-
 
         return earthaccess.search_data(
             **kwargs
         )
-
-
-
-    def download(
-        self,
-        results,
-        directory: Path,
-    ) -> list[Path]:
-
-        if not results:
-    raise ValueError("No Earthdata granules found.")
-
-        directory.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        files = earthaccess.download(
-            results,
-            local_path=directory,
-        )
-
-
-        return [
-            Path(file)
-            for file in files
-        ]
-       
