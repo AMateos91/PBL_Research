@@ -89,3 +89,5 @@ class EarthData(Acquisition):
             Path(file)
             for file in files
         ]
+        if not results:
+    raise ValueError("No Earthdata granules found.")
