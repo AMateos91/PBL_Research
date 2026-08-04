@@ -238,6 +238,17 @@ class Scheduler(Enum):
     COSINE = "cosine"
 
     REDUCE_ON_PLATEAU = "reduce_on_plateau"
+
+
+class EnsembleMethod(Enum):
+
+    MEAN = "mean"
+
+    MEDIAN = "median"
+
+    WEIGHTED = "weighted"
+
+    VOTING = "voting"
     
 
 class Dataset(StrEnum):
