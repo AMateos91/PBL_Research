@@ -10,42 +10,45 @@ from sklearn.metrics import (
     r2_score,
 )
 
+from ...utils.constants import Metric
 
-class Metric:
+
+class Metrics:
 
     _METRICS = {
 
-        "accuracy": accuracy_score,
+        Metric.ACCURACY: accuracy_score,
 
-        "f1": f1_score,
+        Metric.F1: f1_score,
 
-        "mae": mean_absolute_error,
+        Metric.MAE: mean_absolute_error,
 
-        "mse": mean_squared_error,
+        Metric.MSE: mean_squared_error,
 
-        "r2": r2_score,
+        Metric.R2: r2_score,
 
     }
 
     @classmethod
     def compute(
         cls,
-        name: str,
+        metric: Metric,
         y_true: np.ndarray,
         y_pred: np.ndarray,
         **kwargs,
     ):
 
-        if name not in cls._METRICS:
+        if metric not in cls._METRICS:
 
             raise ValueError(
-                f"Unknown metric: {name}"
+                f"Unknown metric: {metric}"
             )
 
         return cls._METRICS[
-            name
+            metric
         ](
             y_true,
             y_pred,
             **kwargs,
         )
+        
