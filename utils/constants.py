@@ -186,7 +186,34 @@ class TextureMetric(Enum):
     CORRELATION = "correlation"
 
     ASM = "ASM"
-    
+
+
+class LossFunction(Enum):
+
+    MSE = "mse"
+
+    MAE = "mae"
+
+    HUBER = "huber"
+
+    CROSS_ENTROPY = "cross_entropy"
+
+    BCE = "bce"
+
+    BCE_LOGITS = "bce_logits"
+
+
+class Metric(Enum):
+
+    ACCURACY = "accuracy"
+
+    F1 = "f1"
+
+    MAE = "mae"
+
+    MSE = "mse"
+
+    R2 = "r2"
 
 class Dataset(StrEnum):
 
