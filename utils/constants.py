@@ -21,6 +21,47 @@ class Band(Enum):
     THERMAL = "thermal"
 
 
+class ColorMap(Enum):
+
+    VIRIDIS = "viridis"
+
+    PLASMA = "plasma"
+
+    INFERNO = "inferno"
+
+    MAGMA = "magma"
+
+    CIVIDIS = "cividis"
+
+    TURBO = "turbo"
+
+    JET = "jet"
+
+    GRAY = "gray"
+
+    BINARY = "binary"
+
+    HOT = "hot"
+
+    COOL = "cool"
+
+    SPRING = "spring"
+
+    SUMMER = "summer"
+
+    AUTUMN = "autumn"
+
+    WINTER = "winter"
+
+    TERRAIN = "terrain"
+
+    OCEAN = "ocean"
+
+    GIST_EARTH = "gist_earth"
+
+    CUBEHELIX = "cubehelix"
+
+
 class CRS(Enum):
 
     WGS84 = "EPSG:4326"
