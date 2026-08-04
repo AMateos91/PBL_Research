@@ -4,8 +4,8 @@ from pathlib import Path
 
 import earthaccess
 
-from ..exceptions import AuthenticationError
-from ..logger import Logger
+from ..utils.exceptions import AuthenticationError
+from ..utils.logger import Logger
 from .base import Acquisition
 
 class EarthData(Acquisition):
