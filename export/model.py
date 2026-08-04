@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import h5py
 import joblib
 import torch
 
 from ..base import Model
+from ...utils.constants import ExportFormat
 
 from .exporter import Exporter
 
@@ -14,37 +16,43 @@ class ModelExporter(Exporter):
         self,
         model: Model,
         path: str,
+        format: ExportFormat,
     ) -> None:
 
-        suffix = path.split(
-            ".",
-        )[-1].lower()
+        match format:
 
-        if suffix == "joblib":
+            case ExportFormat.JOBLIB:
 
-            joblib.dump(
-                model,
-                path,
-            )
+                joblib.dump(
+                    model,
+                    path,
+                )
 
-        elif suffix in {
+            case ExportFormat.TORCH:
 
-            "pt",
+                torch.save(
+                    model.model.state_dict(),
+                    path,
+                )
 
-            "pth",
+            case ExportFormat.HDF5:
 
-        }:
+                with h5py.File(
+                    path,
+                    "w",
+                ) as file:
 
-            torch.save(
+                    for name, parameter in (
+                        model.model.state_dict().items()
+                    ):
 
-                model.model.state_dict(),
+                        file.create_dataset(
+                            name,
+                            data=parameter.cpu().numpy(),
+                        )
 
-                path,
+            case _:
 
-            )
-
-        else:
-
-            raise ValueError(
-                f"Unsupported format: {suffix}"
-            )
+                raise ValueError(
+                    f"Unsupported export format: {format}"
+                )
