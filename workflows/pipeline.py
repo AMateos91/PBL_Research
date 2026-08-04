@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+from typing import TypeVar
+
 from .workflow import Workflow
+
+
+T = TypeVar(
+    "T",
+)
 
 
 class Pipeline(Workflow):
@@ -14,8 +21,8 @@ class Pipeline(Workflow):
 
     def run(
         self,
-        data,
-    ):
+        data: T,
+    ) -> T:
 
         for workflow in self.workflows:
 
