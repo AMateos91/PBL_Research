@@ -1,6 +1,6 @@
+
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 from PBL_Research.preprocessing.loader import Loader
@@ -27,21 +27,18 @@ def run_pipeline(data_dir: str = "data/raw") -> None:
     print(f"Found {len(files)} GeoTIFF files.")
 
     loader = Loader(masked=True)
-
     dataset = loader.process(files)
 
     print("\n=== Loader ===")
     print(dataset)
 
     quality = Quality(drop_invalid=True)
-
     dataset = quality.process(dataset)
 
     print("\n=== Quality ===")
     print(dataset)
 
     vegetation = Vegetation()
-
     dataset = vegetation.compute(dataset)
 
     print("\n=== Vegetation Features ===")
@@ -50,23 +47,9 @@ def run_pipeline(data_dir: str = "data/raw") -> None:
     print("\nPipeline completed successfully.")
 
 
-def main() -> None:
-
-    parser = argparse.ArgumentParser(
-        description="PBL Research preprocessing and feature extraction pipeline."
-    )
-
-    parser.add_argument(
-        "--data-dir",
-        type=str,
-        default="data/raw",
-        help="Directory containing GeoTIFF files.",
-    )
-
-    args = parser.parse_args()
-
-    run_pipeline(args.data_dir)
-
-
 if __name__ == "__main__":
-    main()
+
+    # Cambia esta ruta cuando quieras ejecutar el ejemplo
+    DATA_DIR = "data/raw"
+
+    run_pipeline(DATA_DIR)
