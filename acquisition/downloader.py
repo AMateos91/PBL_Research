@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import earthaccess
+
 
 class Downloader:
 
@@ -11,6 +13,18 @@ class Downloader:
         directory: Path,
     ) -> list[Path]:
 
-        raise NotImplementedError(
-            "Downloader backend not implemented."
+        directory.mkdir(
+            parents=True,
+            exist_ok=True,
         )
+
+        if not results:
+            return []
+
+        return [
+            Path(file)
+            for file in earthaccess.download(
+                results,
+                local_path=str(directory),
+            )
+        ]
