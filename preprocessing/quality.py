@@ -21,16 +21,32 @@ class Quality(Preprocessing):
         dataset: xr.Dataset,
     ) -> xr.Dataset:
 
-        if "quality_flag" not in dataset:
+        if "Fmask" not in dataset:
 
             return dataset
 
-        quality = dataset["quality_flag"]
+        fmask = dataset["Fmask"].astype("uint8")
+
+        cloud = (fmask & (1 << 1)) != 0
+        shadow = (fmask & (1 << 3)) != 0
+        snow = (fmask & (1 << 4)) != 0
+        water = (fmask & (1 << 5)) != 0
+
+        dataset["cloud"] = cloud
+        dataset["shadow"] = shadow
+        dataset["snow"] = snow
+        dataset["water"] = water
+
+        dataset["valid"] = ~(
+            cloud |
+            shadow |
+            snow
+        )
 
         if self.drop_invalid:
 
             dataset = dataset.where(
-                quality == 1,
+                dataset["valid"],
                 drop=False,
             )
 
