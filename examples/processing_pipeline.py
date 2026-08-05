@@ -48,7 +48,6 @@ def run_pipeline(data_dir: str = "data/raw") -> None:
 
 if __name__ == "__main__":
 
-    # Cambia esta ruta cuando quieras ejecutar el ejemplo
     DATA_DIR = "data/raw"
 
     run_pipeline(DATA_DIR)
