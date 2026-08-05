@@ -19,30 +19,40 @@ class NeuralModel(Model, ABC):
     def to(
         self,
         device: str,
-    ):
+    ) -> "NeuralModel":
 
-        self.model.to(device)
+        self.model.to(
+            device
+        )
 
         return self
 
-    def parameters(self):
+    def parameters(
+        self,
+    ):
 
         return self.model.parameters()
 
-    def train(self):
+    def train(
+        self,
+    ) -> None:
 
         self.model.train()
 
-    def eval(self):
+    def eval(
+        self,
+    ) -> None:
 
         self.model.eval()
 
     def __call__(
         self,
         x: torch.Tensor,
-    ):
+    ) -> torch.Tensor:
 
-        return self.model(x)
+        return self.model(
+            x
+        )
 
     def fit(
         self,
@@ -59,11 +69,11 @@ class NeuralModel(Model, ABC):
         x: torch.Tensor,
     ) -> torch.Tensor:
 
-        self.model.eval()
+        self.eval()
 
         with torch.no_grad():
 
-            return self.model(
+            return self(
                 x
             )
 
@@ -81,8 +91,20 @@ class NeuralModel(Model, ABC):
     def load(
         cls,
         path: str,
+        **kwargs,
     ):
 
-        raise NotImplementedError(
-            "Each neural network must implement its own load()."
+        instance = cls(
+            **kwargs
         )
+
+        instance.model.load_state_dict(
+            torch.load(
+                path,
+                map_location="cpu",
+            )
+        )
+
+        instance.eval()
+
+        return instance
