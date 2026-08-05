@@ -8,7 +8,7 @@ from sklearn.metrics import (
     r2_score,
 )
 
-from ...utils.constants import Metric
+from ..utils.constants import Metric
 
 from .evaluator import Evaluator
 
