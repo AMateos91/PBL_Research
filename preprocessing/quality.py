@@ -38,9 +38,10 @@ class Quality(Preprocessing):
         dataset["water"] = water
 
         dataset["valid"] = ~(
-            cloud |
-            shadow |
-            snow
+               cloud |
+               shadow |
+               snow |
+               water
         )
 
         if self.drop_invalid:
