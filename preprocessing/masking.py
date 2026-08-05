@@ -9,8 +9,8 @@ class Masking(Preprocessing):
 
     def __init__(
         self,
-        mask_variable: str = "valid",
-        mask_value: int | float | bool = 1,
+        mask_variable = "valid",
+        mask_value = True,
     ):
 
         super().__init__()
