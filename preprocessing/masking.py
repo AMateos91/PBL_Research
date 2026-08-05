@@ -9,7 +9,7 @@ class Masking(Preprocessing):
 
     def __init__(
         self,
-        mask_variable: str = "mask",
+        mask_variable: str = "valid",
         mask_value: int | float | bool = 1,
     ):
 
@@ -22,17 +22,15 @@ class Masking(Preprocessing):
     def process(
         self,
         dataset: xr.Dataset,
-    ) -> xr.Dataset:
+) -> xr.Dataset:
 
         if self.mask_variable not in dataset:
 
-            return dataset
-
-        mask = dataset[self.mask_variable]
+               return dataset
 
         dataset = dataset.where(
-            mask == self.mask_value
-        )
+               dataset[self.mask_variable]
+    )
 
         dataset.attrs["masked"] = True
 
