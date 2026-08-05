@@ -16,6 +16,34 @@ class NeuralModel(Model, ABC):
 
         self.model = model
 
+    def to(
+        self,
+        device: str,
+    ):
+
+        self.model.to(device)
+
+        return self
+
+    def parameters(self):
+
+        return self.model.parameters()
+
+    def train(self):
+
+        self.model.train()
+
+    def eval(self):
+
+        self.model.eval()
+
+    def __call__(
+        self,
+        x: torch.Tensor,
+    ):
+
+        return self.model(x)
+
     def fit(
         self,
         *args,
@@ -56,5 +84,5 @@ class NeuralModel(Model, ABC):
     ):
 
         raise NotImplementedError(
-            "Each neural network must implement its own load() method."
+            "Each neural network must implement its own load()."
         )
