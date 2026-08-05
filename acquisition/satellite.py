@@ -3,8 +3,9 @@ from __future__ import annotations
 from abc import abstractmethod
 from pathlib import Path
 
-from .earthdata import EarthData
+import xarray as xr
 
+from .earthdata import EarthData
 from ..utils.types import BoundingBox
 from ..utils.types import TimeRange
 
@@ -91,13 +92,14 @@ class Satellite(EarthData):
     def bands() -> dict[str, str]:
         ...
 
-    def _rename_bands(
-    self,
-    dataset: xr.Dataset,
-    mapping: dict[str, str],
-) -> xr.Dataset:
+    def rename_bands(
+        self,
+        dataset: xr.Dataset,
+    ) -> xr.Dataset:
 
-    return dataset.rename(mapping)
+        return dataset.rename(
+            self.bands()
+        )
 
     @staticmethod
     @abstractmethod
