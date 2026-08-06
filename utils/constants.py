@@ -267,6 +267,8 @@ class Metric(Enum):
 
     R2 = "r2"
 
+    BIAS = "bias"
+
 
 class Optimizer(Enum):
 
