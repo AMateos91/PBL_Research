@@ -23,7 +23,7 @@ class Predictor:
         x: np.ndarray | torch.Tensor,
     ) -> np.ndarray | torch.Tensor:
         """
-        Generate predictions from the input data.
+        Generate predictions.
         """
 
         if isinstance(x, np.ndarray):
@@ -31,8 +31,7 @@ class Predictor:
 
         if isinstance(x, torch.Tensor):
 
-            if hasattr(self.model, "eval"):
-                self.model.eval()
+            self.model.eval()
 
             with torch.no_grad():
                 return self.model.predict(x)
