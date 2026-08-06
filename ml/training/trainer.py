@@ -1,22 +1,36 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import torch
+from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
 
 
 class Trainer:
+    """
+    Trainer for PyTorch neural network models.
+    """
 
     def __init__(
         self,
         model: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
-        loss,
+        loss: Callable,
         device: str = "cpu",
+        scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
     ) -> None:
 
         self.model = model.to(device)
         self.optimizer = optimizer
         self.loss = loss
         self.device = device
+        self.scheduler = scheduler
+
+        self.history: dict[str, list[float]] = {
+            "train_loss": [],
+            "validation_loss": [],
+        }
 
     def train_step(
         self,
@@ -42,7 +56,7 @@ class Trainer:
 
         self.optimizer.step()
 
-        return loss.item()
+        return float(loss.item())
 
     @torch.no_grad()
     def validation_step(
@@ -63,39 +77,15 @@ class Trainer:
             y,
         )
 
-        return loss.item()
-
-    def train(
-        self,
-        train_loader,
-        epochs: int = 1,
-    ) -> None:
-
-        for epoch in range(epochs):
-
-            running_loss = 0.0
-
-            for x, y in train_loader:
-
-                running_loss += self.train_step(
-                    x,
-                    y,
-                )
-
-            running_loss /= len(train_loader)
-
-            print(
-                f"Epoch {epoch + 1}/{epochs} - "
-                f"Loss: {running_loss:.6f}"
-            )
+        return float(loss.item())
 
     @torch.no_grad()
     def validate(
         self,
-        validation_loader,
+        validation_loader: DataLoader,
     ) -> float:
 
-        losses = []
+        losses: list[float] = []
 
         for x, y in validation_loader:
 
@@ -110,38 +100,68 @@ class Trainer:
 
     def fit(
         self,
-        train_loader,
-        validation_loader=None,
+        train_loader: DataLoader,
+        validation_loader: DataLoader | None = None,
         epochs: int = 1,
-    ) -> None:
+    ) -> dict[str, list[float]]:
+
+        if epochs <= 0:
+            raise ValueError(
+                "epochs must be greater than zero."
+            )
 
         for epoch in range(epochs):
 
             running_loss = 0.0
 
-            for x, y in train_loader:
+            progress = tqdm(
+                train_loader,
+                desc=f"Epoch {epoch + 1}/{epochs}",
+                leave=False,
+            )
 
-                running_loss += self.train_step(
+            for x, y in progress:
+
+                loss = self.train_step(
                     x,
                     y,
                 )
 
+                running_loss += loss
+
+                progress.set_postfix(
+                    train_loss=f"{loss:.6f}"
+                )
+
             running_loss /= len(train_loader)
 
+            self.history[
+                "train_loss"
+            ].append(running_loss)
+
             message = (
-                f"Epoch {epoch + 1}/{epochs} - "
+                f"Epoch {epoch + 1}/{epochs} | "
                 f"Train Loss: {running_loss:.6f}"
             )
 
             if validation_loader is not None:
 
                 validation_loss = self.validate(
-                    validation_loader,
+                    validation_loader
                 )
 
+                self.history[
+                    "validation_loss"
+                ].append(validation_loss)
+
                 message += (
-                    f" - Validation Loss: "
+                    f" | Validation Loss: "
                     f"{validation_loss:.6f}"
                 )
 
+            if self.scheduler is not None:
+                self.scheduler.step()
+
             print(message)
+
+        return self.history
