@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 from .callbacks import Callback
+from .early_stopping import EarlyStopping
 
 
 class Trainer:
@@ -22,6 +23,7 @@ class Trainer:
         device: str = "cpu",
         scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
         callbacks: list[Callback] | None = None,
+        early_stopping: EarlyStopping | None = None,
     ) -> None:
 
         self.model = model.to(device)
@@ -30,6 +32,7 @@ class Trainer:
         self.device = device
         self.scheduler = scheduler
         self.callbacks = callbacks or []
+        self.early_stopping = early_stopping
 
         self.history: dict[str, list[float]] = {
             "train_loss": [],
@@ -157,9 +160,9 @@ class Trainer:
 
             running_loss /= len(train_loader)
 
-            self.history["train_loss"].append(
-                running_loss
-            )
+            self.history[
+                "train_loss"
+            ].append(running_loss)
 
             logs = {
                 "train_loss": running_loss,
@@ -173,21 +176,40 @@ class Trainer:
             if validation_loader is not None:
 
                 validation_loss = self.validate(
-                    validation_loader
+                    validation_loader,
                 )
 
                 self.history[
                     "validation_loss"
-                ].append(
-                    validation_loss
-                )
+                ].append(validation_loss)
 
-                logs["validation_loss"] = validation_loss
+                logs[
+                    "validation_loss"
+                ] = validation_loss
 
                 message += (
                     f" | Validation Loss: "
                     f"{validation_loss:.6f}"
                 )
+
+                if (
+                    self.early_stopping is not None
+                    and self.early_stopping.step(
+                        validation_loss
+                    )
+                ):
+
+                    print(
+                        "Early stopping triggered."
+                    )
+
+                    for callback in self.callbacks:
+                        callback.on_epoch_end(
+                            epoch,
+                            logs,
+                        )
+
+                    break
 
             if self.scheduler is not None:
                 self.scheduler.step()
