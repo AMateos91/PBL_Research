@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+from numpy.typing import NDArray
 
 from sklearn.metrics import (
     mean_absolute_error,
@@ -14,12 +15,25 @@ from .evaluator import Evaluator
 
 
 class RegressionEvaluator(Evaluator):
+    """
+    Evaluator for regression models.
+    """
 
     def evaluate(
         self,
-        y_true: np.ndarray,
-        y_pred: np.ndarray,
+        y_true: NDArray[np.floating],
+        y_pred: NDArray[np.floating],
     ) -> dict[Metric, float]:
+
+        if y_true.shape != y_pred.shape:
+            raise ValueError(
+                "y_true and y_pred must have the same shape."
+            )
+
+        if y_true.size == 0:
+            raise ValueError(
+                "Input arrays cannot be empty."
+            )
 
         mse = mean_squared_error(
             y_true,
@@ -35,11 +49,16 @@ class RegressionEvaluator(Evaluator):
 
             Metric.MSE: mse,
 
-            Metric.RMSE: mse**0.5,
+            Metric.RMSE: np.sqrt(mse),
 
             Metric.R2: r2_score(
                 y_true,
                 y_pred,
             ),
 
+            Metric.BIAS: float(
+                np.mean(
+                    y_pred - y_true
+                )
+            ),
         }
