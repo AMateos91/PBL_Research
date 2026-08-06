@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-
 import torch
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
@@ -19,7 +17,7 @@ class Trainer:
         self,
         model: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
-        loss: Callable,
+        loss: torch.nn.Module,
         device: str = "cpu",
         scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
         callbacks: list[Callback] | None = None,
@@ -117,8 +115,18 @@ class Trainer:
                 "epochs must be greater than zero."
             )
 
+        if self.early_stopping is not None:
+            self.early_stopping.reset()
+
+        self.history = {
+            "train_loss": [],
+            "validation_loss": [],
+        }
+
         for callback in self.callbacks:
             callback.on_train_begin()
+
+        stop_training = False
 
         for epoch in range(epochs):
 
@@ -160,9 +168,9 @@ class Trainer:
 
             running_loss /= len(train_loader)
 
-            self.history[
-                "train_loss"
-            ].append(running_loss)
+            self.history["train_loss"].append(
+                running_loss
+            )
 
             logs = {
                 "train_loss": running_loss,
@@ -203,13 +211,7 @@ class Trainer:
                         "Early stopping triggered."
                     )
 
-                    for callback in self.callbacks:
-                        callback.on_epoch_end(
-                            epoch,
-                            logs,
-                        )
-
-                    break
+                    stop_training = True
 
             if self.scheduler is not None:
                 self.scheduler.step()
@@ -221,6 +223,9 @@ class Trainer:
                 )
 
             print(message)
+
+            if stop_training:
+                break
 
         for callback in self.callbacks:
             callback.on_train_end()
