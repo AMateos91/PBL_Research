@@ -4,15 +4,19 @@ from abc import ABC
 from abc import abstractmethod
 
 import numpy as np
+import torch
 
 
 class Model(ABC):
+    """
+    Abstract base class for machine learning models.
+    """
 
     @abstractmethod
     def fit(
         self,
-        x: np.ndarray,
-        y: np.ndarray,
+        x: np.ndarray | torch.Tensor,
+        y: np.ndarray | torch.Tensor,
     ) -> "Model":
         """
         Train the model.
@@ -22,12 +26,23 @@ class Model(ABC):
     @abstractmethod
     def predict(
         self,
-        x: np.ndarray,
-    ) -> np.ndarray:
+        x: np.ndarray | torch.Tensor,
+    ) -> np.ndarray | torch.Tensor:
         """
         Generate predictions.
         """
         raise NotImplementedError
+
+    def eval(
+        self,
+    ) -> None:
+        """
+        Put the model in evaluation mode.
+
+        Classical models do not require any action.
+        Neural network models should override this method.
+        """
+        return
 
     @abstractmethod
     def save(
