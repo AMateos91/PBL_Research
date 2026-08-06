@@ -6,6 +6,8 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
+from .callbacks import Callback
+
 
 class Trainer:
     """
@@ -19,6 +21,7 @@ class Trainer:
         loss: Callable,
         device: str = "cpu",
         scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
+        callbacks: list[Callback] | None = None,
     ) -> None:
 
         self.model = model.to(device)
@@ -26,6 +29,7 @@ class Trainer:
         self.loss = loss
         self.device = device
         self.scheduler = scheduler
+        self.callbacks = callbacks or []
 
         self.history: dict[str, list[float]] = {
             "train_loss": [],
@@ -110,17 +114,27 @@ class Trainer:
                 "epochs must be greater than zero."
             )
 
+        for callback in self.callbacks:
+            callback.on_train_begin()
+
         for epoch in range(epochs):
+
+            for callback in self.callbacks:
+                callback.on_epoch_begin(epoch)
 
             running_loss = 0.0
 
             progress = tqdm(
-                train_loader,
+                enumerate(train_loader),
+                total=len(train_loader),
                 desc=f"Epoch {epoch + 1}/{epochs}",
                 leave=False,
             )
 
-            for x, y in progress:
+            for batch, (x, y) in progress:
+
+                for callback in self.callbacks:
+                    callback.on_batch_begin(batch)
 
                 loss = self.train_step(
                     x,
@@ -133,11 +147,23 @@ class Trainer:
                     train_loss=f"{loss:.6f}"
                 )
 
+                for callback in self.callbacks:
+                    callback.on_batch_end(
+                        batch,
+                        {
+                            "loss": loss,
+                        },
+                    )
+
             running_loss /= len(train_loader)
 
-            self.history[
-                "train_loss"
-            ].append(running_loss)
+            self.history["train_loss"].append(
+                running_loss
+            )
+
+            logs = {
+                "train_loss": running_loss,
+            }
 
             message = (
                 f"Epoch {epoch + 1}/{epochs} | "
@@ -152,7 +178,11 @@ class Trainer:
 
                 self.history[
                     "validation_loss"
-                ].append(validation_loss)
+                ].append(
+                    validation_loss
+                )
+
+                logs["validation_loss"] = validation_loss
 
                 message += (
                     f" | Validation Loss: "
@@ -162,6 +192,15 @@ class Trainer:
             if self.scheduler is not None:
                 self.scheduler.step()
 
+            for callback in self.callbacks:
+                callback.on_epoch_end(
+                    epoch,
+                    logs,
+                )
+
             print(message)
+
+        for callback in self.callbacks:
+            callback.on_train_end()
 
         return self.history
