@@ -139,7 +139,7 @@ class HSRLReader(HDFReader):
                     values,
                 )
 
-            else:
+               else:
 
                 variables[name] = (
                     "observation",
