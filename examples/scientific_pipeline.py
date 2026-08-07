@@ -75,6 +75,11 @@ from PBL_Research.collocation.temporal import TemporalCollocator
 
 from PBL_Research.builder.scientific_builder import ScientificBuilder
 
+from PBL_Research.acquisition.activate import (
+    ACTIVATE,
+    ACTIVATEProduct,
+)
+
 # Download HSRL data if necessary
 
 activate = ACTIVATE(
