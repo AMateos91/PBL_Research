@@ -68,12 +68,12 @@ print("Output:", OUTPUT)
 # Imports
 # -----------------------------------------------------
 
-from acquisition.hsrl import HSRLReader
+from PBL_Research.acquisition.hsrl import HSRLReader
 
-from collocation.spatial import SpatialCollocator
-from collocation.temporal import TemporalCollocator
+from PBL_Research.collocation.spatial import SpatialCollocator
+from PBL_Research.collocation.temporal import TemporalCollocator
 
-from builder.scientific_builder import ScientificBuilder
+from PBL_Research.builder.scientific_builder import ScientificBuilder
 
 # Download HSRL data if necessary
 
