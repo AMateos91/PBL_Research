@@ -143,13 +143,13 @@ class HDFReader:
 
         ]
 
-    def tree(
+  def tree(
         self,
     ) -> None:
 
         file = self.open()
 
-    def visit(
+       def visit(
             group,
             level: int = 0,
         ) -> None:
