@@ -12,51 +12,77 @@ class HSRLReader(HDFReader):
 
     VARIABLE_ALIASES = {
 
-    "latitude": [
-        "latitude",
-        "lat",
-        "Latitude",
-        "Lat",
-        "gps_lat",
-    ],
+        "latitude": [
+            "latitude",
+            "lat",
+            "Latitude",
+            "Lat",
+            "gps_lat",
+        ],
 
-    "longitude": [
-        "longitude",
-        "lon",
-        "Longitude",
-        "Lon",
-        "gps_lon",
-    ],
+        "longitude": [
+            "longitude",
+            "lon",
+            "Longitude",
+            "Lon",
+            "gps_lon",
+        ],
 
-    "time": [
-        "time",
-        "Time",
-        "UTC_Time",
-        "gps_time",
-    ],
+        "time": [
+            "time",
+            "Time",
+            "UTC_Time",
+            "gps_time",
+        ],
 
-    "altitude": [
-        "altitude",
-        "Altitude",
-        "GPSAltitude",
-        "AircraftAltitude",
-        "alt",
-    ],
+        "altitude": [
+            "altitude",
+            "Altitude",
+            "GPSAltitude",
+            "AircraftAltitude",
+            "alt",
+            "gpd_alt",
+        ],
 
-    "cloud_height": [
-        "cloud_height",
-        "CloudHeight",
-        "Cloud_Height",
-    ],
+        "cloud_height": [
+            "cloud_height",
+            "CloudHeight",
+            "Cloud_Height",
+        ],
 
-    "backscatter": [
-        "Backscatter",
-        "backscatter",
-        "Aerosol_Backscatter",
-        "532_bsc",
-        "AB_prfl",
-        "bscNorm",
-    ],
+        "backscatter": [
+            "Backscatter",
+            "backscatter",
+            "Aerosol_Backscatter",
+            "532_bsc",
+            "AB_prfl",
+            "bscNorm",
+        ],
+
+        "cloud_extinction": [
+            "cloud_ext_prfl",
+            "cloud_ext_average",
+            "CloudExtinction",
+            "Cloud_Extinction",
+        ],
+
+        "optical_depth": [
+            "OD",
+            "optical_depth",
+            "OpticalDepth",
+        ],
+
+        "reflectance": [
+            "Reflectance",
+            "ReflectanceAvg",
+        ],
+
+        "wind_speed": [
+            "WindSpeedDerivedCM",
+            "WindSpeedDerivedHU",
+            "WindSpeed",
+            "wind_speed",
+        ],
 
     }
 
@@ -78,9 +104,19 @@ class HSRLReader(HDFReader):
 
         for alias in aliases:
 
+            alias_lower = alias.lower()
+
             for dataset in datasets:
 
-                if alias.lower() in dataset.lower():
+                dataset_lower = dataset.lower()
+
+                if (
+                    dataset_lower == alias_lower
+                    or dataset_lower.endswith(
+                        f"/{alias_lower}"
+                    )
+                    or alias_lower in dataset_lower
+                ):
 
                     return dataset
 
@@ -102,7 +138,7 @@ class HSRLReader(HDFReader):
 
     def read_dataset(
         self,
-) -> xr.Dataset:
+    ) -> xr.Dataset:
 
         mapping = self.variable_map()
 
@@ -111,85 +147,96 @@ class HSRLReader(HDFReader):
 
         for name, path in mapping.items():
 
-           if path is None:
-              continue
+            if path is None:
+                continue
 
-           try:
-               values = np.asarray(
-                self.read(path)
-            )
-           except Exception:
-              continue
+            try:
 
-           if values.ndim == 0:
+                values = np.asarray(
+                    self.read(
+                        path,
+                    )
+                )
 
-               variables[name] = values.item()
+            except Exception:
 
-           elif values.ndim == 1:
+                continue
+
+            if values.ndim == 0:
+
+                variables[name] = values.item()
+
+                continue
+
+            if values.ndim == 1:
 
                 if name in {
-                "latitude",
-                "longitude",
-                "time",
-                "altitude",
-            }:
+                    "latitude",
+                    "longitude",
+                    "time",
+                    "altitude",
+                }:
 
                     coordinates[name] = (
-                       "observation",
+                        "observation",
                         values,
-                )
+                    )
 
                 else:
 
                     variables[name] = (
-                       "observation",
+                        "observation",
                         values,
-                )
+                    )
 
-            elif values.ndim == 2:
+                continue
+
+            if values.ndim == 2:
 
                 variables[name] = (
-                     (
-                    "observation",
-                    "level",
-                ),
-                values,
-            )
+                    (
+                        "observation",
+                        "level",
+                    ),
+                    values,
+                )
 
-           elif values.ndim == 3:
+                continue
 
-               variables[name] = (
-                     (
-                    "observation",
-                    "level",
-                    "channel",
-                ),
-                values,
-            )
+            if values.ndim == 3:
+
+                variables[name] = (
+                    (
+                        "observation",
+                        "level",
+                        "channel",
+                    ),
+                    values,
+                )
+
+                continue
 
         dataset = xr.Dataset(
-           data_vars=variables,
-           coords=coordinates,
-           attrs={
-            "source": str(self.path),
-            "instrument": "NASA HSRL-2",
-        },
-    )
+            data_vars=variables,
+            coords=coordinates,
+            attrs={
+                "source": str(
+                    self.path,
+                ),
+                "instrument": "NASA HSRL-2",
+            },
+        )
 
-    return dataset
+        return dataset
 
     def available_variables(
         self,
     ) -> list[str]:
 
         return [
-
             name
-
             for name, path in self.variable_map().items()
-
             if path is not None
-
         ]
 
     def has_variable(
@@ -198,11 +245,8 @@ class HSRLReader(HDFReader):
     ) -> bool:
 
         return (
-
             name
-
             in self.available_variables()
-
         )
 
     def get(
@@ -225,11 +269,7 @@ class HSRLReader(HDFReader):
             )
 
         return np.asarray(
-
             self.read(
-
                 mapping[name],
-
             )
-
-        ) 
+        )
