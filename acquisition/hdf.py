@@ -329,7 +329,7 @@ class HDFReader:
 
         return data
 
-    def to_xarray(
+ def to_xarray(
         self,
     ):
 
@@ -402,7 +402,7 @@ class HDFReader:
             data_vars=variables,
         )
 
-    def summary(
+ def summary(
         self,
     ) -> dict:
 
@@ -438,4 +438,4 @@ class HDFReader:
             f"groups={summary['groups']}, "
             f"datasets={summary['datasets']}"
             f")"
-        ) 
+        )
