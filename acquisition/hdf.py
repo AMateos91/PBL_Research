@@ -143,11 +143,11 @@ class HDFReader:
 
         ]
 
- def tree(
-     self,
+def tree(
+    self,
 ) -> None:
 
-    file = self.open()
+        file = self.open()
 
         def visit(
             group,
@@ -182,7 +182,7 @@ class HDFReader:
                     f"shape={obj.shape} "
                     f"dtype={obj.dtype}"
                 )
-     visit(file)
+        visit(file)
 
  def search(
         self,
