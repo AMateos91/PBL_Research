@@ -60,26 +60,32 @@ class ACTIVATE(EarthData):
         temporal: TimeRange,
         bounding_box: BoundingBox | None = None,
         **kwargs,
-    ):
+):
 
-        parameters = {
+    if not self.authenticated:
+        self.login()
 
-            "short_name": self.short_name,
+    parameters = {
+        "temporal": temporal,
+    }
 
-            "temporal": temporal,
+    if bounding_box is not None:
+        parameters["bounding_box"] = bounding_box
 
-        }
+    if "doi" in kwargs:
 
-        if bounding_box is not None:
+        parameters["doi"] = kwargs.pop("doi")
 
-            parameters["bounding_box"] = bounding_box
+    else:
 
-        parameters.update(kwargs)
+        parameters["short_name"] = self.short_name
 
-        return super().search(
-            **parameters
-        )
+    parameters.update(kwargs)
 
+    return earthaccess.search_data(
+        **parameters,
+    )
+    
     def download(
         self,
         temporal: TimeRange,
