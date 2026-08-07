@@ -149,7 +149,7 @@ class HDFReader:
 
         file = self.open()
 
-    def visit(
+        def visit(
             group,
             level: int = 0,
         ) -> None:
@@ -183,7 +183,7 @@ class HDFReader:
                         f"dtype={obj.dtype}"
                     )
 
-     visit(file)
+           visit(file)
 
  def search(
         self,
