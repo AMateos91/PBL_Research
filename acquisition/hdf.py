@@ -149,18 +149,18 @@ class HDFReader:
 
     file = self.open()
 
-    def visit(
-        group,
-        level: int = 0,
+        def visit(
+            group,
+            level: int = 0,
     ) -> None:
 
-        indent = "    " * level
+            indent = "    " * level
 
-        for name, obj in group.items():
+            for name, obj in group.items():
 
-            if isinstance(
-                obj,
-                h5py.Group,
+               if isinstance(
+                  obj,
+                  h5py.Group,
             ):
 
                 print(
@@ -172,9 +172,9 @@ class HDFReader:
                     level + 1,
                 )
 
-            elif isinstance(
-                obj,
-                h5py.Dataset,
+                elif isinstance(
+                     obj,
+                     h5py.Dataset,
             ):
 
                 print(
