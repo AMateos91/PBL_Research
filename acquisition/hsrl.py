@@ -127,28 +127,28 @@ class HSRLReader(HDFReader):
 
            elif values.ndim == 1:
 
-              if name in {
+                if name in {
                 "latitude",
                 "longitude",
                 "time",
                 "altitude",
             }:
 
-                coordinates[name] = (
-                    "observation",
-                    values,
+                    coordinates[name] = (
+                       "observation",
+                        values,
                 )
 
-               else:
+                else:
 
-                variables[name] = (
-                    "observation",
-                    values,
+                    variables[name] = (
+                       "observation",
+                        values,
                 )
 
             elif values.ndim == 2:
 
-              variables[name] = (
+                 variables[name] = (
                 (
                     "observation",
                     "level",
@@ -158,7 +158,7 @@ class HSRLReader(HDFReader):
 
            elif values.ndim == 3:
 
-             variables[name] = (
+                 variables[name] = (
                 (
                     "observation",
                     "level",
