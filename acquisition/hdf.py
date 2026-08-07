@@ -425,9 +425,8 @@ class HDFReader:
             "dataset_names": self.datasets,
 
         }
-
  
-    def __repr__(
+ def __repr__(
         self,
     ) -> str:
 
