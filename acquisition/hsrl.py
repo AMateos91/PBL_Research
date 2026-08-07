@@ -13,75 +13,50 @@ class HSRLReader(HDFReader):
     VARIABLE_ALIASES = {
 
         "latitude": [
-            "latitude",
+            "gps_lat",
             "lat",
+            "latitude",
             "Latitude",
             "Lat",
-            "gps_lat",
         ],
 
         "longitude": [
-            "longitude",
+            "gps_lon",
             "lon",
+            "longitude",
             "Longitude",
             "Lon",
-            "gps_lon",
         ],
 
         "time": [
+            "gps_time",
             "time",
             "Time",
             "UTC_Time",
-            "gps_time",
         ],
 
         "altitude": [
+            "gps_alt",
+            "gpd_alt",
+            "alt",
             "altitude",
             "Altitude",
             "GPSAltitude",
             "AircraftAltitude",
-            "alt",
-            "gpd_alt",
         ],
 
         "cloud_height": [
             "cloud_height",
-            "CloudHeight",
-            "Cloud_Height",
+            "CLOUD_HEIGHT",
+            "/DataProducts/cloud_height",
         ],
 
         "backscatter": [
+            "bscNorm",
             "Backscatter",
             "backscatter",
             "Aerosol_Backscatter",
             "532_bsc",
-            "AB_prfl",
-            "bscNorm",
-        ],
-
-        "cloud_extinction": [
-            "cloud_ext_prfl",
-            "cloud_ext_average",
-            "CloudExtinction",
-            "Cloud_Extinction",
-        ],
-
-        "optical_depth": [
-            "OD",
-            "optical_depth",
-            "OpticalDepth",
-        ],
-
-        "reflectance": [
-            "Reflectance",
-            "ReflectanceAvg",
-        ],
-
-        "wind_speed": [
-            "WindSpeedDerivedCM",
-            "WindSpeedDerivedHU",
-            "WindSpeed",
-            "wind_speed",
         ],
 
     }
@@ -102,23 +77,60 @@ class HSRLReader(HDFReader):
 
         datasets = self.datasets
 
+        normalized = {
+            str(dataset).strip().lower(): str(dataset)
+            for dataset in datasets
+        }
+
         for alias in aliases:
 
-            alias_lower = alias.lower()
+            alias_normalized = (
+                alias.strip().lower()
+            )
+
+            if alias_normalized in normalized:
+
+                return normalized[
+                    alias_normalized
+                ]
+
+        for alias in aliases:
+
+            alias_normalized = (
+                alias.strip().lower()
+            )
 
             for dataset in datasets:
 
-                dataset_lower = dataset.lower()
+                dataset_normalized = (
+                    str(dataset)
+                    .strip()
+                    .lower()
+                )
 
-                if (
-                    dataset_lower == alias_lower
-                    or dataset_lower.endswith(
-                        f"/{alias_lower}"
-                    )
-                    or alias_lower in dataset_lower
+                if dataset_normalized.endswith(
+                    "/" + alias_normalized
                 ):
 
-                    return dataset
+                    return str(dataset)
+
+        for alias in aliases:
+
+            alias_normalized = (
+                alias.strip().lower()
+            )
+
+            for dataset in datasets:
+
+                dataset_normalized = (
+                    str(dataset)
+                    .strip()
+                    .lower()
+                )
+
+                if alias_normalized in dataset_normalized:
+
+                    return str(dataset)
 
         return None
 
@@ -128,7 +140,9 @@ class HSRLReader(HDFReader):
 
         mapping = {}
 
-        for name, aliases in self.VARIABLE_ALIASES.items():
+        for name, aliases in (
+            self.VARIABLE_ALIASES.items()
+        ):
 
             mapping[name] = self.find_variable(
                 aliases,
@@ -136,85 +150,412 @@ class HSRLReader(HDFReader):
 
         return mapping
 
+    @staticmethod
+    def _safe_array(
+        values,
+    ) -> np.ndarray:
+
+        return np.asarray(
+            values,
+        )
+
+    @staticmethod
+    def _dimension_name(
+        name: str,
+        ndim: int,
+    ) -> tuple[str, ...]:
+
+        if ndim == 0:
+
+            return ()
+
+        if ndim == 1:
+
+            return (
+                "observation",
+            )
+
+        if ndim == 2:
+
+            return (
+                "observation",
+                "level",
+            )
+
+        if ndim == 3:
+
+            return (
+                "observation",
+                "level",
+                "channel",
+            )
+
+        return tuple(
+            f"dim_{index}"
+            for index in range(ndim)
+        )
+
+    @staticmethod
+    def _is_scalar(
+        values: np.ndarray,
+    ) -> bool:
+
+        return values.ndim == 0
+
+    @staticmethod
+    def _is_singleton(
+        values: np.ndarray,
+    ) -> bool:
+
+        return values.size == 1
+
+    @staticmethod
+    def _valid_observation_length(
+        values: np.ndarray,
+        observation_length: int | None,
+    ) -> bool:
+
+        if values.ndim == 0:
+
+            return True
+
+        if values.size == 1:
+
+            return True
+
+        if values.ndim == 1:
+
+            if observation_length is None:
+
+                return True
+
+            return (
+                len(values)
+                == observation_length
+            )
+
+        if values.ndim >= 2:
+
+            if observation_length is None:
+
+                return True
+
+            return (
+                values.shape[0]
+                == observation_length
+            )
+
+        return False
+
+    @staticmethod
+    def _convert_time(
+        values: np.ndarray,
+    ) -> np.ndarray:
+
+        if values.size == 0:
+
+            return values
+
+        if np.issubdtype(
+            values.dtype,
+            np.datetime64,
+        ):
+
+            return values
+
+        if not np.issubdtype(
+            values.dtype,
+            np.number,
+        ):
+
+            return values
+
+        finite = np.isfinite(
+            values.astype(
+                np.float64,
+                copy=False,
+            )
+        )
+
+        if not finite.any():
+
+            return values
+
+        sample = np.abs(
+            values.astype(
+                np.float64,
+                copy=False,
+            )[finite]
+        )
+
+        magnitude = float(
+            np.nanmedian(
+                sample,
+            )
+        )
+
+        if magnitude > 1e17:
+
+            return values.astype(
+                "datetime64[ns]"
+            )
+
+        if magnitude > 1e14:
+
+            return (
+                values.astype(
+                    "datetime64[us]"
+                )
+                .astype(
+                    "datetime64[ns]"
+                )
+            )
+
+        if magnitude > 1e11:
+
+            return (
+                values.astype(
+                    "datetime64[ms]"
+                )
+                .astype(
+                    "datetime64[ns]"
+                )
+            )
+
+        if magnitude > 1e9:
+
+            return (
+                (
+                    values.astype(
+                        np.float64,
+                    )
+                    * 1e9
+                )
+                .astype(
+                    "datetime64[ns]"
+                )
+            )
+
+        return values
+
+    def _read_variable(
+        self,
+        path: str,
+    ) -> np.ndarray | None:
+
+        try:
+
+            values = self.read(
+                path,
+            )
+
+        except Exception as exc:
+
+            print(
+                f"Unable to read {path}: {exc}"
+            )
+
+            return None
+
+        try:
+
+            return self._safe_array(
+                values,
+            )
+
+        except Exception as exc:
+
+            print(
+                f"Unable to convert {path}: {exc}"
+            )
+
+            return None
+
     def read_dataset(
         self,
     ) -> xr.Dataset:
 
         mapping = self.variable_map()
 
+        print(
+            "\nHSRL variable mapping:"
+        )
+
+        for name, path in mapping.items():
+
+            print(
+                f"  {name}: {path}"
+            )
+
         coordinates = {}
+
         variables = {}
+
+        observation_length = None
+
+        for name in (
+            "latitude",
+            "longitude",
+            "time",
+        ):
+
+            path = mapping.get(
+                name,
+            )
+
+            if path is None:
+
+                continue
+
+            values = self._read_variable(
+                path,
+            )
+
+            if values is None:
+
+                continue
+
+            if values.ndim == 1 and values.size > 1:
+
+                observation_length = (
+                    len(values)
+                )
+
+                break
+
+        if observation_length is None:
+
+            raise RuntimeError(
+                "Unable to determine HSRL observation length."
+            )
 
         for name, path in mapping.items():
 
             if path is None:
+
                 continue
 
-            try:
+            values = self._read_variable(
+                path,
+            )
 
-                values = np.asarray(
-                    self.read(
-                        path,
+            if values is None:
+
+                continue
+
+            if self._is_scalar(
+                values,
+            ):
+
+                variables[name] = values
+
+                continue
+
+            if self._is_singleton(
+                values,
+            ):
+
+                if (
+                    name in {
+                        "latitude",
+                        "longitude",
+                        "time",
+                        "altitude",
+                    }
+                ):
+
+                    print(
+                        f"Skipping singleton coordinate "
+                        f"{name}: {path}"
                     )
+
+                    continue
+
+                variables[name] = values.squeeze()
+
+                continue
+
+            if not self._valid_observation_length(
+                values,
+                observation_length,
+            ):
+
+                print(
+                    f"Skipping incompatible variable "
+                    f"{name}: {path} "
+                    f"shape={values.shape} "
+                    f"observation_length="
+                    f"{observation_length}"
                 )
 
-            except Exception:
-
                 continue
 
-            if values.ndim == 0:
+            if name == "time":
 
-                variables[name] = values.item()
+                values = self._convert_time(
+                    values,
+                )
 
-                continue
+            dimensions = self._dimension_name(
+                name,
+                values.ndim,
+            )
 
-            if values.ndim == 1:
-
-                if name in {
+            if (
+                name in {
                     "latitude",
                     "longitude",
                     "time",
                     "altitude",
-                }:
+                }
+                and values.ndim == 1
+            ):
 
-                    coordinates[name] = (
-                        "observation",
-                        values,
+                if len(values) != observation_length:
+
+                    print(
+                        f"Skipping incompatible coordinate "
+                        f"{name}: {path} "
+                        f"shape={values.shape}"
                     )
 
-                else:
+                    continue
 
-                    variables[name] = (
-                        "observation",
-                        values,
-                    )
-
-                continue
-
-            if values.ndim == 2:
-
-                variables[name] = (
-                    (
-                        "observation",
-                        "level",
-                    ),
+                coordinates[name] = (
+                    dimensions,
                     values,
                 )
 
-                continue
-
-            if values.ndim == 3:
+            else:
 
                 variables[name] = (
-                    (
-                        "observation",
-                        "level",
-                        "channel",
-                    ),
+                    dimensions,
                     values,
                 )
 
-                continue
+        if "latitude" not in coordinates:
+
+            raise RuntimeError(
+                "HSRL latitude could not be loaded."
+            )
+
+        if "longitude" not in coordinates:
+
+            raise RuntimeError(
+                "HSRL longitude could not be loaded."
+            )
+
+        if "time" not in coordinates:
+
+            raise RuntimeError(
+                "HSRL time could not be loaded."
+            )
+
+        if "cloud_height" not in variables:
+
+            raise RuntimeError(
+                "HSRL cloud_height could not be loaded."
+            )
 
         dataset = xr.Dataset(
             data_vars=variables,
@@ -233,9 +574,11 @@ class HSRLReader(HDFReader):
         self,
     ) -> list[str]:
 
+        mapping = self.variable_map()
+
         return [
             name
-            for name, path in self.variable_map().items()
+            for name, path in mapping.items()
             if path is not None
         ]
 
@@ -262,14 +605,18 @@ class HSRLReader(HDFReader):
                 name,
             )
 
-        if mapping[name] is None:
+        path = mapping[name]
+
+        if path is None:
 
             raise KeyError(
                 name,
             )
 
+        values = self.read(
+            path,
+        )
+
         return np.asarray(
-            self.read(
-                mapping[name],
-            )
+            values,
         )
