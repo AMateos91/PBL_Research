@@ -148,8 +148,8 @@ class HSRLReader(HDFReader):
 
             elif values.ndim == 2:
 
-                 variables[name] = (
-                (
+                variables[name] = (
+                     (
                     "observation",
                     "level",
                 ),
@@ -158,8 +158,8 @@ class HSRLReader(HDFReader):
 
            elif values.ndim == 3:
 
-                 variables[name] = (
-                (
+               variables[name] = (
+                     (
                     "observation",
                     "level",
                     "channel",
