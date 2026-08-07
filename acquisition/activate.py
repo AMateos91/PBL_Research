@@ -63,10 +63,10 @@ class ACTIVATE(EarthData):
 ):
 
         if not self.authenticated:
-        self.login()
+           self.login()
 
         parameters = {
-        "temporal": temporal,
+           "temporal": temporal,
     }
 
         if bounding_box is not None:
