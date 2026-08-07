@@ -143,45 +143,38 @@ class HDFReader:
 
         ]
 
-def tree(
-    self,
-) -> None:
+ def tree(
+        self,
+    ) -> None:
 
         file = self.open()
 
         def visit(
             group,
             level: int = 0,
-    ) -> None:
+        ) -> None:
 
             indent = "    " * level
 
             for name, obj in group.items():
 
-               if isinstance(
-                  obj,
-                  h5py.Group,
-            ):
+                if isinstance(obj, h5py.Group):
 
-                   print(
-                      f"{indent}[Group] {name}"
-                )
+                    print(f"{indent}[Group] {name}")
 
-                   visit(
-                       obj,
-                       level + 1,
-                )
+                    visit(
+                        obj,
+                        level + 1,
+                    )
 
-                elif isinstance(
-                     obj,
-                     h5py.Dataset,
-            ):
+                elif isinstance(obj, h5py.Dataset):
 
-                print(
-                    f"{indent}[Dataset] {name} "
-                    f"shape={obj.shape} "
-                    f"dtype={obj.dtype}"
-                )
+                    print(
+                        f"{indent}[Dataset] {name} "
+                        f"shape={obj.shape} "
+                        f"dtype={obj.dtype}"
+                    )
+
         visit(file)
 
  def search(
