@@ -12,47 +12,51 @@ class HSRLReader(HDFReader):
 
     VARIABLE_ALIASES = {
 
-        "latitude": [
-            "latitude",
-            "lat",
-            "Latitude",
-            "Lat",
-        ],
+    "latitude": [
+        "latitude",
+        "lat",
+        "Latitude",
+        "Lat",
+        "gps_lat",
+    ],
 
-        "longitude": [
-            "longitude",
-            "lon",
-            "Longitude",
-            "Lon",
-        ],
+    "longitude": [
+        "longitude",
+        "lon",
+        "Longitude",
+        "Lon",
+        "gps_lon",
+    ],
 
-        "time": [
-            "time",
-            "Time",
-            "UTC_Time",
-            "gps_time",
-        ],
+    "time": [
+        "time",
+        "Time",
+        "UTC_Time",
+        "gps_time",
+    ],
 
-        "altitude": [
-            "altitude",
-            "Altitude",
-            "GPSAltitude",
-            "AircraftAltitude",
-        ],
+    "altitude": [
+        "altitude",
+        "Altitude",
+        "GPSAltitude",
+        "AircraftAltitude",
+        "alt",
+    ],
 
-        "mixed_layer_height": [
-            "MixedLayerHeight",
-            "Mixed_Layer_Height",
-            "MLH",
-            "mixed_layer_height",
-        ],
+    "cloud_height": [
+        "cloud_height",
+        "CloudHeight",
+        "Cloud_Height",
+    ],
 
-        "backscatter": [
-            "Backscatter",
-            "backscatter",
-            "Aerosol_Backscatter",
-            "532_bsc",
-        ],
+    "backscatter": [
+        "Backscatter",
+        "backscatter",
+        "Aerosol_Backscatter",
+        "532_bsc",
+        "AB_prfl",
+        "bscNorm",
+    ],
 
     }
 
