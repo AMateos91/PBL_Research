@@ -75,6 +75,41 @@ from collocation.temporal import TemporalCollocator
 
 from builder.scientific_builder import ScientificBuilder
 
+# Download HSRL data if necessary
+
+activate = ACTIVATE(
+    ACTIVATEProduct.HSRL2,
+)
+
+if not HSRL_DIR.exists():
+
+    HSRL_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+hsrl_files = sorted(
+    HSRL_DIR.rglob("*.h5")
+)
+
+if len(hsrl_files) == 0:
+
+    print(
+        "Downloading ACTIVATE HSRL-2 data..."
+    )
+
+    activate.download(
+        temporal=(
+            START_DATE,
+            END_DATE,
+        ),
+        directory=HSRL_DIR,
+    )
+
+    hsrl_files = sorted(
+        HSRL_DIR.rglob("*.h5")
+    )
+
 # -----------------------------------------------------
 # Discover HSRL files
 # -----------------------------------------------------
