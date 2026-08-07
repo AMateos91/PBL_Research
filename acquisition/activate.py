@@ -63,12 +63,9 @@ class ACTIVATE(EarthData):
 ):
 
         parameters = {
- 
-           "short_name": self.short_name,
-
-           "temporal": temporal,
-
-    }
+            "concept_id": "C3880523781-LARC_CLOUD",
+            "temporal": temporal,
+        }
 
         if bounding_box is not None:
 
