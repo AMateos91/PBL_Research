@@ -102,98 +102,81 @@ class HSRLReader(HDFReader):
 
     def read_dataset(
         self,
-    ) -> xr.Dataset:
+) -> xr.Dataset:
 
         mapping = self.variable_map()
 
         coordinates = {}
         variables = {}
 
-        for name, path in mapping.items():
+       for name, path in mapping.items():
 
-            if path is None:
+           if path is None:
+              continue
 
-                continue
+           try:
+               values = np.asarray(
+                self.read(path)
+            )
+           except Exception:
+              continue
 
-            try:
+           if values.ndim == 0:
 
-                values = np.asarray(
-                    self.read(
-                        path,
-                    )
+               variables[name] = values.item()
+
+           elif values.ndim == 1:
+
+              if name in {
+                "latitude",
+                "longitude",
+                "time",
+                "altitude",
+            }:
+
+                coordinates[name] = (
+                    "observation",
+                    values,
                 )
 
-            except Exception:
+            else:
 
-                continue
-
-            if values.ndim == 1:
-
-                if name in {
-
-                    "latitude",
-                    "longitude",
-                    "time",
-                    "altitude",
-
-                }:
-
-                    coordinates[name] = (
-                        (
-                            "observation",
-                        ),
-                        values,
-                    )
-
-                else:
-
-                    variables[name] = (
-                        (
-                            "observation",
-                        ),
-                        values,
-                    )
+                variables[name] = (
+                    "observation",
+                    values,
+                )
 
             elif values.ndim == 2:
 
-                variables[name] = (
-                    (
-                        "observation",
-                        "level",
-                    ),
-                    values,
-                )
+              variables[name] = (
+                (
+                    "observation",
+                    "level",
+                ),
+                values,
+            )
 
-            elif values.ndim == 3:
+           elif values.ndim == 3:
 
-                variables[name] = (
-                    (
-                        "observation",
-                        "level",
-                        "channel",
-                    ),
-                    values,
-                )
+             variables[name] = (
+                (
+                    "observation",
+                    "level",
+                    "channel",
+                ),
+                values,
+            )
 
         dataset = xr.Dataset(
+           data_vars=variables,
+           coords=coordinates,
+           attrs={
+            "source": str(self.path),
+            "instrument": "NASA HSRL-2",
+        },
+    )
 
-            data_vars=variables,
-
-            coords=coordinates,
-
-            attrs={
-
-                "source": str(
-                    self.path,
-                ),
-
-                "instrument": "NASA HSRL-2",
-
-            },
-
-        )
-
-        return dataset
+    return dataset
 
     def available_variables(
         self,
