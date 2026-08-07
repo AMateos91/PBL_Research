@@ -62,27 +62,21 @@ class ACTIVATE(EarthData):
         **kwargs,
 ):
 
-        if not self.authenticated:
-           self.login()
-
         parameters = {
+ 
+           "short_name": self.short_name,
+
            "temporal": temporal,
+
     }
 
         if bounding_box is not None:
-           parameters["bounding_box"] = bounding_box
 
-        if "doi" in kwargs:
-
-           parameters["doi"] = kwargs.pop("doi")
-
-        else:
-
-           parameters["short_name"] = self.short_name
+            parameters["bounding_box"] = bounding_box
 
         parameters.update(kwargs)
-
-        return earthaccess.search_data(
+ 
+        return super().search(
             **parameters,
     )
     
