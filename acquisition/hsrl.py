@@ -109,7 +109,7 @@ class HSRLReader(HDFReader):
         coordinates = {}
         variables = {}
 
-       for name, path in mapping.items():
+        for name, path in mapping.items():
 
            if path is None:
               continue
