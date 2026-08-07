@@ -163,13 +163,13 @@ def tree(
                   h5py.Group,
             ):
 
-                print(
-                    f"{indent}[Group] {name}"
+                   print(
+                      f"{indent}[Group] {name}"
                 )
 
-                visit(
-                    obj,
-                    level + 1,
+                   visit(
+                       obj,
+                       level + 1,
                 )
 
                 elif isinstance(
