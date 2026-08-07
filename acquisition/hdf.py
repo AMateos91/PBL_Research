@@ -183,7 +183,7 @@ class HDFReader:
                         f"dtype={obj.dtype}"
                     )
 
-               visit(file)
+     visit(file)
 
  def search(
         self,
