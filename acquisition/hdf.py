@@ -6,8 +6,8 @@ import h5py
 
 
 class HDFReader:
-
-    def __init__(
+    
+ def __init__(
         self,
         path: str | Path,
     ) -> None:
@@ -22,7 +22,7 @@ class HDFReader:
 
         self.file: h5py.File | None = None
 
-    def open(
+ def open(
         self,
     ) -> h5py.File:
 
@@ -35,7 +35,7 @@ class HDFReader:
 
         return self.file
 
-    def close(
+ def close(
         self,
     ) -> None:
 
@@ -45,7 +45,7 @@ class HDFReader:
 
             self.file = None
 
-    def __enter__(
+ def __enter__(
         self,
     ) -> "HDFReader":
 
@@ -53,7 +53,7 @@ class HDFReader:
 
         return self
 
-    def __exit__(
+ def __exit__(
         self,
         exc_type,
         exc_value,
@@ -62,7 +62,7 @@ class HDFReader:
 
         self.close()
 
-    def _walk(
+ def _walk(
         self,
         group: h5py.Group,
         prefix: str = "",
@@ -99,8 +99,8 @@ class HDFReader:
 
         return items
 
-    @property
-    def groups(
+ @property
+ def groups(
         self,
     ) -> list[str]:
 
@@ -121,8 +121,8 @@ class HDFReader:
 
         ]
 
-    @property
-    def datasets(
+ @property
+ def datasets(
         self,
     ) -> list[str]:
 
@@ -143,13 +143,13 @@ class HDFReader:
 
         ]
 
-  def tree(
+ def tree(
         self,
     ) -> None:
 
         file = self.open()
 
-       def visit(
+    def visit(
             group,
             level: int = 0,
         ) -> None:
@@ -183,9 +183,9 @@ class HDFReader:
                         f"dtype={obj.dtype}"
                     )
 
-        visit(file)
+               visit(file)
 
-    def search(
+ def search(
         self,
         keyword: str,
     ) -> list[str]:
@@ -204,7 +204,7 @@ class HDFReader:
 
         return matches
 
-    def attributes(
+ def attributes(
         self,
         path: str,
     ) -> dict:
@@ -247,7 +247,7 @@ class HDFReader:
 
         return attributes
 
-    def read(
+ def read(
         self,
         path: str,
     ):
@@ -273,7 +273,7 @@ class HDFReader:
 
         return obj[...]
 
-    def info(
+ def info(
         self,
         path: str,
     ) -> dict:
@@ -315,7 +315,7 @@ class HDFReader:
 
         }
 
-    def read_all(
+ def read_all(
         self,
     ) -> dict[str, object]:
 
