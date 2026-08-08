@@ -36,6 +36,29 @@ class HSRLReader:
         "temperature_profile": "State/temperature_prfl",
     }
 
+    PROFILE_VARIABLES = {
+        "backscatter": "DataProducts/AB_prfl",
+        "aerosol_backscatter": "DataProducts/IAB",
+        "lid": "DataProducts/LID",
+        "multiple_scattering_fraction": "DataProducts/MultScatFrac",
+        "optical_depth": "DataProducts/OD_prfl",
+        "cloud_extent_profile": "DataProducts/cloud_ext_prfl",
+        "temperature_profile": "State/temperature_prfl",
+    }
+
+    OBSERVATION_VARIABLES = {
+        "reflectance": "DataProducts/Reflectance",
+        "reflectance_average": "DataProducts/ReflectanceAvg",
+        "cloud_extent_average": "DataProducts/cloud_ext_average",
+        "transmittance": "DataProducts/TransP",
+        "surface_transmittance": "DataProducts/TransSurface",
+        "wind_speed_cm": "DataProducts/WindSpeedDerivedCM",
+        "wind_speed_hu": "DataProducts/WindSpeedDerivedHU",
+        "normalized_backscatter": "DataProducts/bscNorm",
+        "selection_index": "DataProducts/selection_index",
+        "temperature": "State/temperature",
+    }
+
     def __init__(
         self,
         path: str | Path,
@@ -56,7 +79,10 @@ class HSRLReader:
 
         available = []
 
-        with h5py.File(self.path, "r") as file:
+        with h5py.File(
+            self.path,
+            "r",
+        ) as file:
 
             for name, path in self.VARIABLE_MAP.items():
 
@@ -70,7 +96,10 @@ class HSRLReader:
         path: str,
     ) -> np.ndarray:
 
-        with h5py.File(self.path, "r") as file:
+        with h5py.File(
+            self.path,
+            "r",
+        ) as file:
 
             if path not in file:
                 raise KeyError(
@@ -81,20 +110,15 @@ class HSRLReader:
                 file[path]
             )
 
-    def _read_attributes(
-        self,
-        path: str,
-    ) -> dict:
+    @staticmethod
+    def _as_1d(
+        values: np.ndarray,
+    ) -> np.ndarray:
 
-        with h5py.File(self.path, "r") as file:
-
-            if path not in file:
-                return {}
-
-            return {
-                key: value
-                for key, value in file[path].attrs.items()
-            }
+        return np.asarray(
+            values,
+            dtype=np.float64,
+        ).reshape(-1)
 
     @staticmethod
     def _decode_time(
@@ -113,72 +137,13 @@ class HSRLReader:
             )
         ).to_numpy()
 
-    @staticmethod
-    def _clean_1d(
-        values: np.ndarray,
-    ) -> np.ndarray:
-
-        values = np.asarray(
-            values,
-            dtype=np.float64,
-        )
-
-        return values.reshape(-1)
-
-    @staticmethod
-    def _clean_profile(
-        values: np.ndarray,
-    ) -> np.ndarray:
-
-        values = np.asarray(
-            values,
-            dtype=np.float64,
-        )
-
-        if values.ndim != 2:
-            raise ValueError(
-                f"Expected 2-D profile, got {values.shape}"
-            )
-
-        return values
-
     def read_dataset(
         self,
     ) -> xr.Dataset:
 
-        latitude = self._clean_1d(
-            self.read("lat")
-        )
-
-        longitude = self._clean_1d(
-            self.read("lon")
-        )
-
-        altitude = self._clean_1d(
-            self.read("alt")
-        )
-
-        raw_time = self._clean_1d(
-            self.read("time")
-        )
-
-        time = self._decode_time(
-            raw_time
-        )
-
-        cloud_height = self._clean_1d(
+        cloud_height = self._as_1d(
             self.read(
                 "DataProducts/cloud_height"
-            )
-        )
-
-        z = self._clean_1d(
-            self.read("z")
-        )
-
-        backscatter = self._clean_profile(
-            self.read(
-                "DataProducts/AB_prfl"
             )
         )
 
@@ -186,45 +151,75 @@ class HSRLReader:
             cloud_height
         )
 
+        latitude = self._as_1d(
+            self.read("lat")
+        )
+
+        longitude = self._as_1d(
+            self.read("lon")
+        )
+
+        altitude = self._as_1d(
+            self.read("alt")
+        )
+
+        raw_time = self._as_1d(
+            self.read("time")
+        )
+
+        time = self._decode_time(
+            raw_time
+        )
+
+        z = self._as_1d(
+            self.read("z")
+        )
+
         if len(latitude) != n_observations:
             raise ValueError(
-                "Latitude length does not match "
-                "cloud_height."
+                "lat does not match cloud_height: "
+                f"{len(latitude)} != {n_observations}"
             )
 
         if len(longitude) != n_observations:
             raise ValueError(
-                "Longitude length does not match "
-                "cloud_height."
+                "lon does not match cloud_height: "
+                f"{len(longitude)} != {n_observations}"
             )
 
         if len(altitude) != n_observations:
             raise ValueError(
-                "Altitude length does not match "
-                "cloud_height."
+                "alt does not match cloud_height: "
+                f"{len(altitude)} != {n_observations}"
             )
 
         if len(time) != n_observations:
             raise ValueError(
-                "Time length does not match "
-                "cloud_height."
+                "time does not match cloud_height: "
+                f"{len(time)} != {n_observations}"
             )
 
-        if backscatter.shape[0] != n_observations:
-            raise ValueError(
-                "Backscatter observation dimension "
-                "does not match cloud_height."
-            )
+        backscatter = np.asarray(
+            self.read(
+                "DataProducts/AB_prfl"
+            ),
+            dtype=np.float64,
+        )
 
-        if backscatter.shape[1] != len(z):
+        if backscatter.shape != (
+            n_observations,
+            len(z),
+        ):
+
             raise ValueError(
-                "Backscatter level dimension "
-                "does not match z."
+                "AB_prfl has unexpected shape: "
+                f"{backscatter.shape}; expected "
+                f"({n_observations}, {len(z)})"
             )
 
         data_vars = {
             "cloud_height": (
-                ("observation",),
+                "observation",
                 cloud_height,
             ),
             "backscatter": (
@@ -236,50 +231,15 @@ class HSRLReader:
             ),
         }
 
-        optional_profiles = {
-            "aerosol_backscatter":
-                "DataProducts/IAB",
-            "lid":
-                "DataProducts/LID",
-            "multiple_scattering_fraction":
-                "DataProducts/MultScatFrac",
-            "optical_depth":
-                "DataProducts/OD_prfl",
-            "cloud_extent_profile":
-                "DataProducts/cloud_ext_prfl",
-            "temperature_profile":
-                "State/temperature_prfl",
-        }
-
-        optional_1d = {
-            "reflectance":
-                "DataProducts/Reflectance",
-            "reflectance_average":
-                "DataProducts/ReflectanceAvg",
-            "cloud_extent_average":
-                "DataProducts/cloud_ext_average",
-            "transmittance":
-                "DataProducts/TransP",
-            "surface_transmittance":
-                "DataProducts/TransSurface",
-            "wind_speed_cm":
-                "DataProducts/WindSpeedDerivedCM",
-            "wind_speed_hu":
-                "DataProducts/WindSpeedDerivedHU",
-            "normalized_backscatter":
-                "DataProducts/bscNorm",
-            "selection_index":
-                "DataProducts/selection_index",
-            "temperature":
-                "State/temperature",
-        }
-
         with h5py.File(
             self.path,
             "r",
         ) as file:
 
-            for name, path in optional_profiles.items():
+            for name, path in self.PROFILE_VARIABLES.items():
+
+                if name == "backscatter":
+                    continue
 
                 if path not in file:
                     continue
@@ -289,24 +249,24 @@ class HSRLReader:
                     dtype=np.float64,
                 )
 
-                if (
-                    values.ndim == 2
-                    and values.shape
-                    == (
-                        n_observations,
-                        len(z),
-                    )
+                if values.ndim != 2:
+                    continue
+
+                if values.shape != (
+                    n_observations,
+                    len(z),
                 ):
+                    continue
 
-                    data_vars[name] = (
-                        (
-                            "observation",
-                            "level",
-                        ),
-                        values,
-                    )
+                data_vars[name] = (
+                    (
+                        "observation",
+                        "level",
+                    ),
+                    values,
+                )
 
-            for name, path in optional_1d.items():
+            for name, path in self.OBSERVATION_VARIABLES.items():
 
                 if path not in file:
                     continue
@@ -316,14 +276,13 @@ class HSRLReader:
                     dtype=np.float64,
                 ).reshape(-1)
 
-                if len(values) == n_observations:
+                if len(values) != n_observations:
+                    continue
 
-                    data_vars[name] = (
-                        (
-                            "observation",
-                        ),
-                        values,
-                    )
+                data_vars[name] = (
+                    "observation",
+                    values,
+                )
 
         dataset = xr.Dataset(
             data_vars=data_vars,
@@ -360,8 +319,6 @@ class HSRLReader:
                     self.path
                 ),
                 "instrument": "NASA HSRL-2",
-                "time_reference":
-                    "2022-01-11T00:00:00Z",
             },
         )
 
