@@ -3,9 +3,7 @@ from __future__ import annotations
 from typing import Literal
 
 import numpy as np
-import pandas as pd
 import xarray as xr
-
 from sklearn.neighbors import BallTree
 
 
@@ -21,9 +19,9 @@ class SpatialCollocator:
     Spatial collocation between airborne and satellite
     observations using a BallTree and the Haversine metric.
 
-    The airborne dataset may contain vertical profiles with
-    dimensions (observation, level). The level dimension is
-    preserved during spatial collocation.
+    The airborne dataset may contain vertical profiles
+    with dimensions (observation, level). The level
+    dimension is preserved.
     """
 
     EARTH_RADIUS = 6371008.8
@@ -44,7 +42,6 @@ class SpatialCollocator:
 
         self.satellite_lat = satellite_lat
         self.satellite_lon = satellite_lon
-
         self.airborne_lat = airborne_lat
         self.airborne_lon = airborne_lon
 
@@ -56,83 +53,63 @@ class SpatialCollocator:
             max_altitude_difference
         )
 
-        self.k = max(
-            1,
-            k,
-        )
+        self.k = max(1, int(k))
+        self.aggregation = aggregation
 
-        if aggregation not in {
+        if self.aggregation not in {
             "nearest",
             "mean",
             "distance_weighted",
         }:
-
             raise ValueError(
-                f"Unknown aggregation method: {aggregation}"
+                f"Unknown aggregation method: "
+                f"{self.aggregation}"
             )
 
-        self.aggregation = aggregation
-
     @staticmethod
-    def _validate_dataset(
+    def _validate_coordinates(
         dataset: xr.Dataset,
         latitude: str,
         longitude: str,
-    ) -> None:
-
-        if not isinstance(
-            dataset,
-            xr.Dataset,
-        ):
-
-            raise TypeError(
-                "SpatialCollocator requires "
-                "xarray.Dataset inputs."
-            )
+    ) -> str:
 
         if latitude not in dataset:
-
             raise ValueError(
                 f"Missing latitude variable: {latitude}"
             )
 
         if longitude not in dataset:
-
             raise ValueError(
                 f"Missing longitude variable: {longitude}"
             )
 
-    @staticmethod
-    def _observation_dimension(
-        dataset: xr.Dataset,
-        latitude: str,
-    ) -> str:
+        lat = dataset[latitude]
 
-        dims = dataset[latitude].dims
+        lon = dataset[longitude]
 
-        if len(dims) != 1:
-
+        if lat.ndim != 1:
             raise ValueError(
-                "Latitude must have exactly one dimension."
+                f"{latitude} must be one-dimensional."
             )
 
-        return dims[0]
+        if lon.ndim != 1:
+            raise ValueError(
+                f"{longitude} must be one-dimensional."
+            )
+
+        if lat.dims != lon.dims:
+            raise ValueError(
+                "Latitude and longitude must use "
+                "the same dimension."
+            )
+
+        return lat.dims[0]
 
     @staticmethod
-    def _to_radians(
+    def _coordinates_to_radians(
         latitude: np.ndarray,
         longitude: np.ndarray,
     ) -> np.ndarray:
-
-        latitude = np.asarray(
-            latitude,
-            dtype=float,
-        )
-
-        longitude = np.asarray(
-            longitude,
-            dtype=float,
-        )
 
         return np.deg2rad(
             np.column_stack(
@@ -158,11 +135,20 @@ class SpatialCollocator:
             & (longitude <= 180.0)
         )
 
-    def _build_tree(
+    def _prepare_satellite(
         self,
         satellite: xr.Dataset,
-        satellite_observation_dimension: str,
-    ) -> tuple[BallTree, np.ndarray]:
+    ) -> tuple[
+        xr.Dataset,
+        str,
+        np.ndarray,
+    ]:
+
+        dimension = self._validate_coordinates(
+            satellite,
+            self.satellite_lat,
+            self.satellite_lon,
+        )
 
         latitude = np.asarray(
             satellite[
@@ -184,34 +170,34 @@ class SpatialCollocator:
         )
 
         if not np.any(valid):
-
             raise ValueError(
                 "Satellite dataset contains no valid "
-                "latitude/longitude coordinates."
+                "coordinates."
             )
 
-        coordinates = self._to_radians(
-            latitude[valid],
-            longitude[valid],
+        valid_indices = np.flatnonzero(valid)
+
+        satellite_valid = satellite.isel(
+            {
+                dimension: valid_indices,
+            }
         )
 
-        tree = BallTree(
-            coordinates,
-            metric="haversine",
+        return (
+            satellite_valid,
+            dimension,
+            valid_indices,
         )
-
-        satellite_indices = np.flatnonzero(
-            valid
-        )
-
-        return tree, satellite_indices
 
     def _query(
         self,
         tree: BallTree,
         latitude: np.ndarray,
         longitude: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[
+        np.ndarray,
+        np.ndarray,
+    ]:
 
         valid = self._valid_coordinates(
             latitude,
@@ -238,146 +224,107 @@ class SpatialCollocator:
 
         if np.any(valid):
 
-            coordinates = self._to_radians(
-                latitude[valid],
-                longitude[valid],
+            coordinates = (
+                self._coordinates_to_radians(
+                    latitude[valid],
+                    longitude[valid],
+                )
             )
 
-            query_distances, query_indices = (
+            queried_distances, queried_indices = (
                 tree.query(
                     coordinates,
                     k=self.k,
                 )
             )
 
-            query_distances *= (
+            queried_distances *= (
                 self.EARTH_RADIUS
             )
 
-            distances[valid] = query_distances
+            distances[valid] = (
+                queried_distances
+            )
 
-            indices[valid] = query_indices
+            indices[valid] = (
+                queried_indices
+            )
 
         return distances, indices
 
-    def _aggregate_satellite(
+    def _aggregate(
         self,
         satellite: xr.Dataset,
         indices: np.ndarray,
         distances: np.ndarray,
+        dimension: str,
     ) -> xr.Dataset:
 
-        valid = indices >= 0
+        if self.aggregation == "nearest":
 
-        if not np.any(valid):
-
-            return xr.Dataset()
-
-        indices = indices[valid]
-        distances = distances[valid]
+            return satellite.isel(
+                {
+                    dimension: indices[:, 0],
+                }
+            )
 
         selected = satellite.isel(
             {
-                self._satellite_observation_dimension: (
-                    indices
+                dimension: indices.reshape(-1),
+            }
+        )
+
+        selected = selected.assign_coords(
+            {
+                "_neighbour": (
+                    (
+                        dimension,
+                    ),
+                    np.repeat(
+                        np.arange(
+                            indices.shape[0]
+                        ),
+                        indices.shape[1],
+                    ),
                 )
             }
         )
 
-        if self.aggregation == "nearest":
+        selected = selected.swap_dims(
+            {
+                dimension: "_neighbour"
+            }
+        )
 
-            return selected.isel(
-                {
-                    self._satellite_observation_dimension: 0
-                }
-            )
+        selected = selected.drop_vars(
+            dimension,
+            errors="ignore",
+        )
 
         if self.aggregation == "mean":
 
-            return selected.mean(
-                dim=self._satellite_observation_dimension,
-                skipna=True,
-            )
+            return selected.groupby(
+                "_neighbour"
+            ).mean()
 
         weights = 1.0 / (
             distances + 1e-12
         )
 
-        weights /= weights.sum()
-
-        return selected.weighted(
-            xr.DataArray(
-                weights,
-                dims=(
-                    self._satellite_observation_dimension,
-                ),
-            )
-        ).mean(
-            dim=self._satellite_observation_dimension,
-            skipna=True,
+        weights /= weights.sum(
+            axis=1,
+            keepdims=True,
         )
-
-    def _satellite_matches(
-        self,
-        satellite: xr.Dataset,
-        indices: np.ndarray,
-        distances: np.ndarray,
-        satellite_observation_dimension: str,
-    ) -> xr.Dataset:
-
-        valid = indices >= 0
-
-        if not np.any(valid):
-
-            return xr.Dataset()
-
-        selected_indices = indices[valid]
-
-        selected_distances = distances[valid]
-
-        selected = satellite.isel(
-            {
-                satellite_observation_dimension: (
-                    selected_indices
-                )
-            }
-        )
-
-        if self.aggregation == "nearest":
-
-            selected = selected.isel(
-                {
-                    satellite_observation_dimension: 0
-                }
-            )
-
-            return selected
-
-        if self.aggregation == "mean":
-
-            return selected.mean(
-                dim=satellite_observation_dimension,
-                skipna=True,
-            )
-
-        weights = 1.0 / (
-            selected_distances + 1e-12
-        )
-
-        weights /= weights.sum()
 
         weight_array = xr.DataArray(
-            weights,
-            dims=(
-                satellite_observation_dimension,
-            ),
+            weights.reshape(-1),
+            dims=("_neighbour",),
         )
 
         return selected.weighted(
             weight_array
         ).mean(
-            dim=satellite_observation_dimension,
-            skipna=True,
+            dim="_neighbour"
         )
 
     def collocate(
@@ -386,46 +333,62 @@ class SpatialCollocator:
         airborne: xr.Dataset,
     ) -> xr.Dataset:
 
-        self._validate_dataset(
+        if not isinstance(
             satellite,
-            self.satellite_lat,
-            self.satellite_lon,
-        )
+            xr.Dataset,
+        ):
+            raise TypeError(
+                "satellite must be an xarray.Dataset."
+            )
 
-        self._validate_dataset(
+        if not isinstance(
             airborne,
-            self.airborne_lat,
-            self.airborne_lon,
-        )
+            xr.Dataset,
+        ):
+            raise TypeError(
+                "airborne must be an xarray.Dataset."
+            )
 
-        airborne_observation_dimension = (
-            self._observation_dimension(
+        airborne_dimension = (
+            self._validate_coordinates(
                 airborne,
                 self.airborne_lat,
+                self.airborne_lon,
             )
         )
 
-        satellite_observation_dimension = (
-            self._observation_dimension(
-                satellite,
-                self.satellite_lat,
+        (
+            satellite_valid,
+            satellite_dimension,
+            _,
+        ) = self._prepare_satellite(
+            satellite
+        )
+
+        satellite_latitude = np.asarray(
+            satellite_valid[
+                self.satellite_lat
+            ].values,
+            dtype=float,
+        )
+
+        satellite_longitude = np.asarray(
+            satellite_valid[
+                self.satellite_lon
+            ].values,
+            dtype=float,
+        )
+
+        tree_coordinates = (
+            self._coordinates_to_radians(
+                satellite_latitude,
+                satellite_longitude,
             )
         )
 
-        self._satellite_observation_dimension = (
-            satellite_observation_dimension
-        )
-
-        satellite, _ = (
-            satellite,
-            satellite_observation_dimension,
-        )
-
-        tree, satellite_indices = (
-            self._build_tree(
-                satellite,
-                satellite_observation_dimension,
-            )
+        tree = BallTree(
+            tree_coordinates,
+            metric="haversine",
         )
 
         airborne_latitude = np.asarray(
@@ -442,21 +405,10 @@ class SpatialCollocator:
             dtype=float,
         )
 
-        distances, tree_indices = self._query(
+        distances, indices = self._query(
             tree,
             airborne_latitude,
             airborne_longitude,
-        )
-
-        satellite_indices = np.where(
-            tree_indices >= 0,
-            satellite_indices[
-                np.maximum(
-                    tree_indices,
-                    0,
-                )
-            ],
-            -1,
         )
 
         nearest_distance = distances[:, 0]
@@ -474,9 +426,13 @@ class SpatialCollocator:
 
         if not np.any(valid_match):
 
-            raise ValueError(
-                "No spatial matches satisfy the "
-                "configured distance constraints."
+            return airborne.isel(
+                {
+                    airborne_dimension: slice(
+                        0,
+                        0,
+                    )
+                }
             )
 
         airborne_indices = np.flatnonzero(
@@ -485,75 +441,70 @@ class SpatialCollocator:
 
         result = airborne.isel(
             {
-                airborne_observation_dimension: (
-                    airborne_indices
-                )
+                airborne_dimension: airborne_indices
             }
         ).copy()
 
-        match_indices = satellite_indices[
+        matched_indices = indices[
             valid_match
         ]
 
-        match_distances = distances[
+        matched_distances = distances[
             valid_match
         ]
 
-        nearest_satellite_indices = (
-            match_indices[:, 0]
-        )
+        if self.aggregation == "nearest":
 
-        nearest_satellite_distances = (
-            match_distances[:, 0]
-        )
-
-        satellite_match = satellite.isel(
-            {
-                satellite_observation_dimension: (
-                    nearest_satellite_indices
-                )
-            }
-        )
-
-        satellite_match = (
-            satellite_match.drop_indexes(
-                satellite_observation_dimension,
-                errors="ignore",
-            )
-        )
-
-        satellite_match = (
-            satellite_match.rename(
-                {
-                    variable: (
-                        f"satellite_{variable}"
-                    )
-                    for variable in satellite_match.data_vars
-                }
-            )
-        )
-
-        satellite_match = (
-            satellite_match.rename(
-                {
-                    coordinate: (
-                        f"satellite_{coordinate}"
-                    )
-                    for coordinate in satellite_match.coords
-                    if coordinate
-                    not in {
-                        satellite_observation_dimension,
+            satellite_match = (
+                satellite_valid.isel(
+                    {
+                        satellite_dimension:
+                            matched_indices[:, 0]
                     }
-                }
+                )
             )
+
+        else:
+
+            satellite_match = self._aggregate(
+                satellite_valid,
+                matched_indices,
+                matched_distances,
+                satellite_dimension,
+            )
+
+        rename_satellite = {}
+
+        for variable in satellite_match.data_vars:
+
+            rename_satellite[
+                variable
+            ] = f"satellite_{variable}"
+
+        satellite_match = satellite_match.rename(
+            rename_satellite
         )
 
         satellite_match = (
             satellite_match.drop_vars(
-                satellite_observation_dimension,
+                satellite_dimension,
                 errors="ignore",
             )
         )
+
+        if satellite_match.sizes:
+
+            satellite_match = (
+                satellite_match.assign_coords(
+                    {
+                        airborne_dimension: (
+                            result[
+                                airborne_dimension
+                            ].values
+                        )
+                    }
+                )
+            )
 
         result = xr.merge(
             [
@@ -565,22 +516,50 @@ class SpatialCollocator:
 
         result[
             "spatial_distance_m"
-        ] = (
-            (
-                airborne[
-                    self.airborne_lat
-                ]
-                .isel(
-                    {
-                        airborne_observation_dimension: (
-                            airborne_indices
-                        )
-                    }
-                )
-                * 0
-            )
-            + nearest_satellite_distances
+        ] = xr.DataArray(
+            nearest_distance[
+                valid_match
+            ],
+            dims=(
+                airborne_dimension,
+            ),
+            coords={
+                airborne_dimension:
+                    result[
+                        airborne_dimension
+                    ]
+                }
+            },
         )
+
+        if (
+            self.airborne_alt is not None
+            and self.satellite_alt is not None
+            and self.max_altitude_difference
+            is not None
+            and self.airborne_alt in result
+            and f"satellite_{self.satellite_alt}"
+            in result
+        ):
+
+            altitude_difference = np.abs(
+                result[
+                    self.airborne_alt
+                ]
+                - result[
+                    f"satellite_{self.satellite_alt}"
+                ]
+            )
+
+            result[
+                "altitude_difference_m"
+            ] = altitude_difference
+
+            result = result.where(
+                altitude_difference
+                <= self.max_altitude_difference,
+                drop=True,
+            )
 
         result.attrs.update(
             {
