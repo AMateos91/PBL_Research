@@ -6,7 +6,6 @@ from sklearn.neighbors import BallTree
 
 
 class SpatialCollocator:
-    """Spatial collocation of satellite and airborne observations."""
 
     EARTH_RADIUS = 6371008.8
 
@@ -26,29 +25,18 @@ class SpatialCollocator:
         self.max_distance = max_distance
 
     @staticmethod
-    def _radians(
+    def _coordinates(
         latitude: np.ndarray,
         longitude: np.ndarray,
     ) -> np.ndarray:
 
         return np.deg2rad(
             np.column_stack(
-                [
+                (
                     latitude,
                     longitude,
-                ]
+                )
             )
-        )
-
-    @staticmethod
-    def _valid(
-        latitude: np.ndarray,
-        longitude: np.ndarray,
-    ) -> np.ndarray:
-
-        return (
-            np.isfinite(latitude)
-            & np.isfinite(longitude)
         )
 
     def collocate(
@@ -58,56 +46,34 @@ class SpatialCollocator:
     ) -> xr.Dataset:
 
         satellite_lat = np.asarray(
-            satellite[
-                self.satellite_lat
-            ].values,
+            satellite[self.satellite_lat].values,
             dtype=float,
         )
 
         satellite_lon = np.asarray(
-            satellite[
-                self.satellite_lon
-            ].values,
+            satellite[self.satellite_lon].values,
             dtype=float,
         )
 
         airborne_lat = np.asarray(
-            airborne[
-                self.airborne_lat
-            ].values,
+            airborne[self.airborne_lat].values,
             dtype=float,
         )
 
         airborne_lon = np.asarray(
-            airborne[
-                self.airborne_lon
-            ].values,
+            airborne[self.airborne_lon].values,
             dtype=float,
         )
 
-        satellite_valid = self._valid(
-            satellite_lat,
-            satellite_lon,
+        satellite_valid = (
+            np.isfinite(satellite_lat)
+            & np.isfinite(satellite_lon)
         )
 
-        airborne_valid = self._valid(
-            airborne_lat,
-            airborne_lon,
+        airborne_valid = (
+            np.isfinite(airborne_lat)
+            & np.isfinite(airborne_lon)
         )
-
-        if not np.any(satellite_valid):
-
-            raise ValueError(
-                "Satellite dataset contains no valid "
-                "coordinates."
-            )
-
-        if not np.any(airborne_valid):
-
-            raise ValueError(
-                "Airborne dataset contains no valid "
-                "coordinates."
-            )
 
         satellite_indices = np.flatnonzero(
             satellite_valid
@@ -117,26 +83,28 @@ class SpatialCollocator:
             airborne_valid
         )
 
+        if satellite_indices.size == 0:
+            raise ValueError(
+                "No valid satellite coordinates."
+            )
+
+        if airborne_indices.size == 0:
+            raise ValueError(
+                "No valid airborne coordinates."
+            )
+
         tree = BallTree(
-            self._radians(
-                satellite_lat[
-                    satellite_valid
-                ],
-                satellite_lon[
-                    satellite_valid
-                ],
+            self._coordinates(
+                satellite_lat[satellite_valid],
+                satellite_lon[satellite_valid],
             ),
             metric="haversine",
         )
 
         distances, neighbours = tree.query(
-            self._radians(
-                airborne_lat[
-                    airborne_valid
-                ],
-                airborne_lon[
-                    airborne_valid
-                ],
+            self._coordinates(
+                airborne_lat[airborne_valid],
+                airborne_lon[airborne_valid],
             ),
             k=1,
         )
@@ -148,39 +116,35 @@ class SpatialCollocator:
 
         neighbours = neighbours[:, 0]
 
-        matched_satellite_indices = (
-            satellite_indices[
-                neighbours
-            ]
-        )
-
-        keep = np.ones(
-            distances.shape,
-            dtype=bool,
+        matched_satellite = (
+            satellite_indices[neighbours]
         )
 
         if self.max_distance is not None:
 
-            keep &= (
+            keep = (
                 distances
                 <= self.max_distance
             )
 
-        airborne_indices = (
-            airborne_indices[keep]
-        )
+            airborne_indices = (
+                airborne_indices[keep]
+            )
 
-        matched_satellite_indices = (
-            matched_satellite_indices[keep]
-        )
+            matched_satellite = (
+                matched_satellite[keep]
+            )
 
-        distances = distances[keep]
+            distances = distances[keep]
 
-        airborne_result = airborne.isel(
+        result = airborne.isel(
             observation=airborne_indices
         ).copy()
 
-        satellite_variables = {}
+        result["spatial_distance_m"] = (
+            "observation",
+            distances,
+        )
 
         for name, variable in satellite.data_vars.items():
 
@@ -188,54 +152,26 @@ class SpatialCollocator:
                 variable.values
             )
 
-            if (
-                values.ndim == 1
-                and values.shape[0]
-                == satellite_lat.shape[0]
-            ):
+            if values.ndim != 1:
+                continue
 
-                satellite_variables[
-                    f"satellite_{name}"
-                ] = (
-                    "observation",
-                    values[
-                        matched_satellite_indices
-                    ],
-                )
+            if values.shape[0] != satellite_lat.shape[0]:
+                continue
 
-        satellite_result = xr.Dataset(
-            data_vars=satellite_variables,
-            coords={
-                "observation": (
-                    airborne_result[
-                        "observation"
-                    ].values
-                )
-            },
-        )
+            selected = values[
+                matched_satellite
+            ]
 
-        result = xr.merge(
-            [
-                airborne_result,
-                satellite_result,
-            ],
-            compat="override",
-        )
-
-        result[
-            "spatial_distance_m"
-        ] = (
-            "observation",
-            distances,
-        )
+            result[
+                f"satellite_{name}"
+            ] = (
+                "observation",
+                selected,
+            )
 
         result.attrs[
             "spatial_collocation"
         ] = True
-
-        result.attrs[
-            "spatial_max_distance_m"
-        ] = self.max_distance
 
         return result
 
