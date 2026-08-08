@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import h5py
 import numpy as np
 import xarray as xr
 
@@ -11,98 +10,58 @@ from .hdf import HDFReader
 
 class HSRLReader(HDFReader):
 
-    VARIABLE_ALIASES = {
-        "latitude": [
-            "gps_lat",
-            "lat",
-            "latitude",
-            "Latitude",
-            "Lat",
-        ],
-        "longitude": [
-            "gps_lon",
-            "lon",
-            "longitude",
-            "Longitude",
-            "Lon",
-        ],
-        "time": [
-            "gps_time",
-            "time",
-            "Time",
-            "UTC_Time",
-        ],
-        "altitude": [
-            "gps_alt",
-            "gps_altitude",
-            "alt",
-            "altitude",
-            "Altitude",
-            "GPSAltitude",
-            "AircraftAltitude",
-        ],
-        "cloud_height": [
-            "cloud_height",
-            "CLOUD_HEIGHT",
-            "/DataProducts/cloud_height",
-        ],
-        "backscatter": [
-            "bscNorm",
-            "Backscatter",
-            "backscatter",
-            "Aerosol_Backscatter",
-            "532_bsc",
-        ],
+    PROFILE_VARIABLES = {
+        "AB_prfl": "/DataProducts/AB_prfl",
+        "IAB_prfl": "/DataProducts/IAB_prfl",
+        "LID_prfl": "/DataProducts/LID_prfl",
+        "MultScatFrac_prfl": "/DataProducts/MultScatFrac_prfl",
+        "OD_prfl": "/DataProducts/OD_prfl",
+        "TransP_prfl": "/DataProducts/TransP_prfl",
+        "cloud_ext_prfl": "/DataProducts/cloud_ext_prfl",
+        "temperature_prfl": "/DataProducts/temperature_prfl",
     }
+
+    NAVIGATION_VARIABLES = {
+        "latitude": "/Nav_Data/gps_lat",
+        "longitude": "/Nav_Data/gps_lon",
+        "time": "/Nav_Data/gps_time",
+        "altitude": "/Nav_Data/gps_alt",
+    }
+
+    PRODUCT_VARIABLES = {
+        "cloud_height": "/DataProducts/cloud_height",
+    }
+
+    VERTICAL_COORDINATE = "/DataProducts/Altitude"
 
     def __init__(
         self,
         path: str | Path,
     ) -> None:
+
         super().__init__(path)
 
-        self._mapping: dict[str, str | None] | None = None
-        self.coordinates: dict[str, object] = {}
-        self.variables: dict[str, object] = {}
-        self.observation_length: int | None = None
-        self.name = self.path.stem
+        self._mapping = None
+        self.observation_length = None
+        self.level_length = None
 
-    def variable_map(self) -> dict[str, str | None]:
+    def variable_map(self) -> dict[str, str]:
 
-        if self._mapping is not None:
-            return dict(self._mapping)
+        mapping = {}
 
-        file = self.open()
+        mapping.update(
+            self.NAVIGATION_VARIABLES
+        )
 
-        datasets = set(self.datasets)
+        mapping.update(
+            self.PRODUCT_VARIABLES
+        )
 
-        mapping: dict[str, str | None] = {}
+        mapping.update(
+            self.PROFILE_VARIABLES
+        )
 
-        for name, aliases in self.VARIABLE_ALIASES.items():
-
-            found = None
-
-            for alias in aliases:
-
-                if alias.startswith("/"):
-                    candidates = [alias]
-                else:
-                    candidates = [
-                        f"/Nav_Data/{alias}",
-                        f"/DataProducts/{alias}",
-                        f"/{alias}",
-                    ]
-
-                for candidate in candidates:
-
-                    if candidate in datasets:
-                        found = candidate
-                        break
-
-                if found is not None:
-                    break
-
-            mapping[name] = found
+        mapping["z"] = self.VERTICAL_COORDINATE
 
         self._mapping = mapping
 
@@ -110,171 +69,29 @@ class HSRLReader(HDFReader):
 
     def available_variables(self) -> list[str]:
 
+        datasets = set(self.datasets)
+
         return [
             name
             for name, path in self.variable_map().items()
-            if path is not None
+            if path in datasets
         ]
 
-    def _find_dataset(self, path: str) -> h5py.Dataset:
-
-        file = self.open()
-
-        if path not in file:
-            raise KeyError(
-                f"HSRL dataset not found: {path}"
-            )
-
-        obj = file[path]
-
-        if not isinstance(obj, h5py.Dataset):
-            raise TypeError(
-                f"HSRL path is not a dataset: {path}"
-            )
-
-        return obj
-
-    def _read_variable(
+    def _read_array(
         self,
         path: str,
-    ) -> tuple[tuple[str, ...], np.ndarray]:
+    ) -> np.ndarray:
 
-        dataset = self._find_dataset(path)
-
-        values = np.asarray(
-            dataset[...]
+        return np.asarray(
+            self.read(path)
         )
 
-        values = np.squeeze(values)
-
-        if values.ndim == 0:
-            dims = ()
-
-        elif values.ndim == 1:
-
-            dims = (
-                "observation",
-            )
-
-            if values.size == 501 and not values.size == self.observation_length:
-                dims = (
-                    "level",
-                )
-
-        elif values.ndim == 2:
-
-            if values.shape[0] == 1:
-                values = values.reshape(-1)
-                dims = (
-                    "level",
-                )
-
-            elif (
-                self.observation_length is not None
-                and values.shape[0] == self.observation_length
-            ):
-                dims = (
-                    "observation",
-                    "level",
-                )
-
-            elif (
-                self.observation_length is not None
-                and values.shape[1] == self.observation_length
-            ):
-                values = values.T
-                dims = (
-                    "observation",
-                    "level",
-                )
-
-            else:
-                dims = (
-                    "observation",
-                    "level",
-                )
-
-        else:
-            dims = tuple(
-                f"dim_{i}"
-                for i in range(values.ndim)
-            )
-
-        return dims, values
-
-    def _read_first_existing(
-        self,
-        candidates: list[str],
-    ) -> tuple[tuple[str, ...], np.ndarray] | None:
-
-        datasets = set(self.datasets)
-
-        for path in candidates:
-
-            if path in datasets:
-                return self._read_variable(path)
-
-        return None
-
-    def _read_vertical_coordinate(
-        self,
-    ) -> tuple[tuple[str, ...], np.ndarray] | None:
-
-        candidates = [
-            "/DataProducts/Altitude",
-            "/DataProducts/altitude",
-            "/DataProducts/z",
-            "/z",
-            "/Altitude",
-        ]
-
-        result = self._read_first_existing(
-            candidates
-        )
-
-        if result is None:
-            return None
-
-        dims, values = result
-
-        values = np.asarray(values).reshape(-1)
-
-        return (
-            ("level",),
-            values,
-        )
-
-    def _valid_observation_length(
-        self,
-        observation_length: int | None,
-    ) -> bool:
-
-        if observation_length is None:
-            return False
-
-        if observation_length <= 1:
-            return False
-
-        if self.observation_length is None:
-            self.observation_length = int(
-                observation_length
-            )
-            return True
-
-        return (
-            int(observation_length)
-            == int(self.observation_length)
-        )
-
-    def _normalise_observation(
-        self,
+    @staticmethod
+    def _squeeze_navigation(
         values: np.ndarray,
     ) -> np.ndarray:
 
         values = np.asarray(values)
-
-        if values.ndim == 0:
-            return values
 
         if values.ndim == 1:
             return values
@@ -287,6 +104,107 @@ class HSRLReader(HDFReader):
             if values.shape[0] == 1:
                 return values[0]
 
+        return np.squeeze(values)
+
+    def _read_navigation(
+        self,
+        name: str,
+        path: str,
+    ) -> np.ndarray:
+
+        values = self._read_array(
+            path
+        )
+
+        values = self._squeeze_navigation(
+            values
+        )
+
+        if values.ndim != 1:
+            raise RuntimeError(
+                f"HSRL {name} is not one-dimensional: "
+                f"shape={values.shape}"
+            )
+
+        return values
+
+    def _read_profile(
+        self,
+        name: str,
+        path: str,
+    ) -> np.ndarray:
+
+        values = self._read_array(
+            path
+        )
+
+        values = np.asarray(
+            values
+        )
+
+        if values.ndim != 2:
+
+            raise RuntimeError(
+                f"HSRL profile {name} is not two-dimensional: "
+                f"shape={values.shape}"
+            )
+
+        if self.observation_length is not None:
+
+            if values.shape[0] != self.observation_length:
+
+                if values.shape[1] == self.observation_length:
+
+                    values = values.T
+
+                else:
+
+                    raise RuntimeError(
+                        f"HSRL profile {name} has incompatible "
+                        f"shape={values.shape}"
+                    )
+
+        if self.level_length is not None:
+
+            if values.shape[1] != self.level_length:
+
+                if values.shape[0] == self.level_length:
+
+                    values = values.T
+
+                else:
+
+                    raise RuntimeError(
+                        f"HSRL profile {name} has incompatible "
+                        f"level dimension: "
+                        f"shape={values.shape}"
+                    )
+
+        return values
+
+    def _read_altitude(
+        self,
+    ) -> np.ndarray:
+
+        values = self._read_array(
+            self.VERTICAL_COORDINATE
+        )
+
+        values = np.asarray(
+            values
+        )
+
+        values = np.squeeze(
+            values
+        )
+
+        if values.ndim != 1:
+
+            raise RuntimeError(
+                "HSRL Altitude could not be converted "
+                "to a one-dimensional vertical coordinate."
+            )
+
         return values
 
     def read_dataset(
@@ -298,236 +216,147 @@ class HSRLReader(HDFReader):
         print("\nHSRL variable mapping:")
 
         for name, path in mapping.items():
+
             print(
-                f"    {name}: {path}"
+                f"{name}: {path}"
             )
 
-        coordinates: dict[str, object] = {}
-        variables: dict[str, object] = {}
+        altitude = self._read_altitude()
 
-        vertical = self._read_vertical_coordinate()
+        self.level_length = int(
+            altitude.size
+        )
 
-        if vertical is not None:
-
-            z_dims, z_values = vertical
-
-            coordinates["z"] = (
-                z_dims,
-                z_values,
-            )
-
-            coordinates["level"] = (
-                "level",
-                np.arange(
-                    z_values.size
-                ),
-            )
-
-        observation_length = None
-
-        for name in (
+        latitude = self._read_navigation(
             "latitude",
+            self.NAVIGATION_VARIABLES[
+                "latitude"
+            ],
+        )
+
+        longitude = self._read_navigation(
             "longitude",
+            self.NAVIGATION_VARIABLES[
+                "longitude"
+            ],
+        )
+
+        time = self._read_navigation(
             "time",
+            self.NAVIGATION_VARIABLES[
+                "time"
+            ],
+        )
+
+        aircraft_altitude = self._read_navigation(
             "altitude",
-        ):
-
-            path = mapping.get(name)
-
-            if path is None:
-                continue
-
-            result = self._read_variable(path)
-
-            dims, values = result
-
-            values = self._normalise_observation(
-                values
-            )
-
-            if values.ndim != 1:
-                continue
-
-            if observation_length is None:
-                observation_length = values.size
-
-            elif values.size != observation_length:
-                continue
-
-        if observation_length is None:
-            raise RuntimeError(
-                "Unable to determine HSRL observation length."
-            )
+            self.NAVIGATION_VARIABLES[
+                "altitude"
+            ],
+        )
 
         self.observation_length = int(
-            observation_length
+            latitude.size
         )
 
-        print(
-            "HSRL observation length:",
-            self.observation_length,
+        if longitude.size != self.observation_length:
+
+            raise RuntimeError(
+                "HSRL longitude has a different "
+                "observation length."
+            )
+
+        if time.size != self.observation_length:
+
+            raise RuntimeError(
+                "HSRL time has a different "
+                "observation length."
+            )
+
+        if (
+            aircraft_altitude.size
+            != self.observation_length
+        ):
+
+            raise RuntimeError(
+                "HSRL altitude has a different "
+                "observation length."
+            )
+
+        cloud_height = self._read_navigation(
+            "cloud_height",
+            self.PRODUCT_VARIABLES[
+                "cloud_height"
+            ],
         )
 
-        for name, path in mapping.items():
+        if cloud_height.size != self.observation_length:
 
-            if path is None:
-                continue
+            raise RuntimeError(
+                "HSRL cloud_height has a different "
+                "observation length."
+            )
+
+        variables = {}
+
+        for name, path in self.PROFILE_VARIABLES.items():
 
             try:
 
-                dims, values = self._read_variable(
-                    path
+                values = self._read_profile(
+                    name,
+                    path,
                 )
 
-            except Exception:
+            except Exception as exc:
+
+                print(
+                    f"Skipping {name}: {exc}"
+                )
+
                 continue
 
-            values = np.asarray(values)
-
-            if name in (
-                "latitude",
-                "longitude",
-                "time",
-                "altitude",
-                "cloud_height",
-            ):
-
-                values = self._normalise_observation(
-                    values
-                )
-
-                if values.ndim != 1:
-                    continue
-
-                if values.size != self.observation_length:
-                    continue
-
-                coordinates[name] = (
+            variables[name] = (
+                (
                     "observation",
-                    values,
-                )
-
-                continue
-
-            if name == "backscatter":
-
-                if values.ndim == 1:
-
-                    if values.size == self.observation_length:
-
-                        variables[name] = (
-                            (
-                                "observation",
-                            ),
-                            values,
-                        )
-
-                elif values.ndim == 2:
-
-                    if (
-                        values.shape[0]
-                        == self.observation_length
-                    ):
-
-                        if "level" in coordinates:
-
-                            level_size = coordinates[
-                                "level"
-                            ][1].size
-
-                            if values.shape[1] == level_size:
-
-                                variables[name] = (
-                                    (
-                                        "observation",
-                                        "level",
-                                    ),
-                                    values,
-                                )
-
-                            else:
-
-                                variables[name] = (
-                                    (
-                                        "observation",
-                                        "level",
-                                    ),
-                                    values,
-                                )
-
-                        else:
-
-                            variables[name] = (
-                                (
-                                    "observation",
-                                    "level",
-                                ),
-                                values,
-                            )
-
-                continue
-
-            if values.ndim == 0:
-
-                variables[name] = (
-                    (),
-                    values,
-                )
-
-        if "latitude" not in coordinates:
-            raise RuntimeError(
-                "HSRL latitude could not be loaded."
-            )
-
-        if "longitude" not in coordinates:
-            raise RuntimeError(
-                "HSRL longitude could not be loaded."
-            )
-
-        if "time" not in coordinates:
-            raise RuntimeError(
-                "HSRL time could not be loaded."
-            )
-
-        if "altitude" not in coordinates:
-            raise RuntimeError(
-                "HSRL altitude could not be loaded."
-            )
-
-        if "backscatter" in variables:
-
-            backscatter = variables[
-                "backscatter"
-            ][1]
-
-            if (
-                backscatter.ndim == 2
-                and "level" not in coordinates
-            ):
-
-                coordinates["level"] = (
                     "level",
-                    np.arange(
-                        backscatter.shape[1]
-                    ),
-                )
+                ),
+                values,
+            )
 
-        if "z" in coordinates:
+        coordinates = {
 
-            z_values = coordinates["z"][1]
+            "latitude": (
+                "observation",
+                latitude,
+            ),
 
-            if (
-                "level" in coordinates
-                and z_values.size
-                != coordinates["level"][1].size
-            ):
+            "longitude": (
+                "observation",
+                longitude,
+            ),
 
-                coordinates["level"] = (
-                    "level",
-                    np.arange(
-                        z_values.size
-                    ),
-                )
+            "time": (
+                "observation",
+                time,
+            ),
+
+            "altitude": (
+                "observation",
+                aircraft_altitude,
+            ),
+
+            "cloud_height": (
+                "observation",
+                cloud_height,
+            ),
+
+            "z": (
+                "level",
+                altitude,
+            ),
+
+        }
 
         dataset = xr.Dataset(
             data_vars=variables,
@@ -536,52 +365,48 @@ class HSRLReader(HDFReader):
 
         dataset.attrs.update(
             {
-                "source": "NASA ACTIVATE HSRL-2",
-                "instrument": "HSRL-2",
-                "file": self.path.name,
+                "source": str(
+                    self.path
+                ),
+                "instrument": "NASA HSRL-2",
+                "observation_length": (
+                    self.observation_length
+                ),
+                "level_length": (
+                    self.level_length
+                ),
             }
         )
 
-        if "time" in dataset:
-
-            time_values = dataset[
-                "time"
-            ].values
-
-            try:
-
-                if np.issubdtype(
-                    time_values.dtype,
-                    np.number,
-                ):
-
-                    origin = np.datetime64(
-                        "2022-01-11T00:00:00"
-                    )
-
-                    datetime_values = (
-                        origin
-                        + time_values.astype(
-                            "timedelta64[s]"
-                        )
-                    )
-
-                    dataset = dataset.assign_coords(
-                        time=(
-                            "observation",
-                            datetime_values,
-                        )
-                    )
-
-            except Exception:
-                pass
-
-        self.coordinates = dict(
-            dataset.coords
+        print(
+            "\nHSRL dataset successfully built."
         )
 
-        self.variables = dict(
-            dataset.data_vars
+        print(
+            "Observations:",
+            self.observation_length,
+        )
+
+        print(
+            "Vertical levels:",
+            self.level_length,
+        )
+
+        print(
+            "Profiles:",
+            list(
+                variables.keys()
+            ),
         )
 
         return dataset
+
+    def __repr__(
+        self,
+    ) -> str:
+
+        return (
+            "HSRLReader("
+            f"path={self.path!r}"
+            ")"
+        )
