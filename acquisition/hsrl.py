@@ -1,293 +1,385 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 import h5py
 import numpy as np
 import xarray as xr
 
-from .hdf import HDFReader
+from .base import HDFReader
 
 
 class HSRLReader(HDFReader):
 
-    VARIABLE_PATHS = {
+    VARIABLE_ALIASES = {
+        "latitude": [
+            "gps_lat",
+            "lat",
+            "latitude",
+            "Latitude",
+            "Lat",
+            "/Nav_Data/gps_lat",
+            "/lat",
+        ],
+        "longitude": [
+            "gps_lon",
+            "lon",
+            "longitude",
+            "Longitude",
+            "Lon",
+            "/Nav_Data/gps_lon",
+            "/lon",
+        ],
+        "time": [
+            "gps_time",
+            "time",
+            "Time",
+            "UTC_Time",
+            "/Nav_Data/gps_time",
+            "/time",
+        ],
+        "altitude": [
+            "gps_alt",
+            "gpd_alt",
+            "alt",
+            "altitude",
+            "Altitude",
+            "GPSAltitude",
+            "AircraftAltitude",
+            "/Nav_Data/gps_alt",
+            "/alt",
+        ],
+        "cloud_height": [
+            "cloud_height",
+            "CLOUD_HEIGHT",
+            "/DataProducts/cloud_height",
+        ],
+        "backscatter": [
+            "bscNorm",
+            "Backscatter",
+            "backscatter",
+            "Aerosol_Backscatter",
+            "532_bsc",
+            "/DataProducts/bscNorm",
+        ],
+    }
+
+    DIRECT_PATHS = {
         "latitude": "/Nav_Data/gps_lat",
         "longitude": "/Nav_Data/gps_lon",
         "time": "/Nav_Data/gps_time",
         "altitude": "/Nav_Data/gps_alt",
         "cloud_height": "/DataProducts/cloud_height",
         "backscatter": "/DataProducts/bscNorm",
+        "ab_prfl": "/DataProducts/AB_prfl",
+        "z": "/z",
     }
 
-    def __init__(
-        self,
-        path: str | Path,
-    ) -> None:
-        super().__init__(path)
+    def __init__(self, source):
+        super().__init__(source)
+        self.source = Path(source)
 
-    @staticmethod
-    def _read(
-        file: h5py.File,
-        path: str,
-    ) -> np.ndarray:
+    def variable_map(self):
+        return dict(self.DIRECT_PATHS)
 
-        if path not in file:
+    def _read_variable(self, path):
+        try:
+            with h5py.File(self.source, "r") as f:
+                if path not in f:
+                    return None
 
-            raise RuntimeError(
-                f"HSRL variable not found: {path}"
-            )
+                value = np.asarray(f[path])
 
-        return np.asarray(
-            file[path][...]
-        )
+            if value.ndim == 2 and value.shape[1] == 1:
+                value = value[:, 0]
 
-    @staticmethod
-    def _normalise(
-        values: np.ndarray,
-    ) -> np.ndarray:
+            elif value.ndim == 2 and value.shape[0] == 1:
+                value = value[0, :]
 
-        values = np.asarray(values)
+            return value
 
-        if values.ndim == 0:
-            return values.reshape(1)
+        except Exception:
+            return None
 
-        if values.ndim == 1:
-            return values
+    def _valid_observation_length(self, observation_length):
+        if observation_length is None:
+            return False
 
-        if values.ndim == 2:
+        try:
+            observation_length = int(observation_length)
+        except (TypeError, ValueError):
+            return False
 
-            if values.shape[1] == 1:
-                return values[:, 0]
+        return observation_length > 1
 
-            if values.shape[0] == 1:
-                return values[0, :]
+    def _read_direct(self, path):
+        value = self._read_variable(path)
 
-        raise RuntimeError(
-            "Cannot normalise HSRL observation "
-            f"with shape {values.shape}."
-        )
+        if value is None:
+            return None
 
-    def variable_map(
-        self,
-    ) -> dict[str, str | None]:
+        value = np.asarray(value)
 
-        mapping = {}
+        if value.ndim == 2 and value.shape[1] == 1:
+            value = value[:, 0]
 
-        with h5py.File(
-            self.path,
-            "r",
-        ) as file:
+        elif value.ndim == 2 and value.shape[0] == 1:
+            value = value[0, :]
 
-            for name, path in self.VARIABLE_PATHS.items():
+        return value
 
-                if path in file:
-                    mapping[name] = path
-                else:
-                    mapping[name] = None
-
-        return mapping
-
-    def available_variables(
-        self,
-    ) -> list[str]:
-
-        mapping = self.variable_map()
-
-        return [
-            name
-            for name, path in mapping.items()
-            if path is not None
+    def _determine_observation_length(self):
+        candidates = [
+            self.DIRECT_PATHS["latitude"],
+            self.DIRECT_PATHS["longitude"],
+            self.DIRECT_PATHS["time"],
+            self.DIRECT_PATHS["altitude"],
+            self.DIRECT_PATHS["cloud_height"],
+            self.DIRECT_PATHS["backscatter"],
         ]
 
-    def read_dataset(
-        self,
-    ) -> xr.Dataset:
+        for path in candidates:
+            values = self._read_direct(path)
 
-        print(
-            "\nHSRL variable mapping:"
-        )
+            if values is None:
+                continue
 
+            values = np.asarray(values)
+
+            if values.ndim == 1 and values.size > 1:
+                return int(values.size)
+
+        return None
+
+    def read_dataset(self):
         mapping = self.variable_map()
+
+        print("\nHSRL variable mapping:")
 
         for name, path in mapping.items():
+            print(f"    {name}: {path}")
 
-            print(
-                f"    {name}: {path}"
-            )
+        observation_length = self._determine_observation_length()
 
-        required = [
-            "latitude",
-            "longitude",
-            "time",
-            "altitude",
-            "cloud_height",
-        ]
-
-        missing = [
-            name
-            for name in required
-            if mapping.get(name) is None
-        ]
-
-        if missing:
-
+        if not self._valid_observation_length(observation_length):
             raise RuntimeError(
-                "Required HSRL variables could not be loaded: "
-                + ", ".join(missing)
+                "Unable to determine HSRL observation length."
             )
 
-        with h5py.File(
-            self.path,
-            "r",
-        ) as file:
-
-            raw_latitude = self._read(
-                file,
-                self.VARIABLE_PATHS["latitude"],
-            )
-
-            raw_longitude = self._read(
-                file,
-                self.VARIABLE_PATHS["longitude"],
-            )
-
-            raw_time = self._read(
-                file,
-                self.VARIABLE_PATHS["time"],
-            )
-
-            raw_altitude = self._read(
-                file,
-                self.VARIABLE_PATHS["altitude"],
-            )
-
-            raw_cloud_height = self._read(
-                file,
-                self.VARIABLE_PATHS["cloud_height"],
-            )
-
-            raw_backscatter = self._read(
-                file,
-                self.VARIABLE_PATHS["backscatter"],
-            )
-
-        latitude = self._normalise(
-            raw_latitude
+        print(
+            f"HSRL observation length: {observation_length}"
         )
 
-        longitude = self._normalise(
-            raw_longitude
+        latitude = self._read_direct(
+            mapping["latitude"]
         )
 
-        time = self._normalise(
-            raw_time
+        longitude = self._read_direct(
+            mapping["longitude"]
         )
 
-        altitude = self._normalise(
-            raw_altitude
+        time = self._read_direct(
+            mapping["time"]
         )
 
-        cloud_height = self._normalise(
-            raw_cloud_height
+        altitude = self._read_direct(
+            mapping["altitude"]
         )
 
-        backscatter = self._normalise(
-            raw_backscatter
+        cloud_height = self._read_direct(
+            mapping["cloud_height"]
         )
 
-        lengths = {
-            "latitude": latitude.size,
-            "longitude": longitude.size,
-            "time": time.size,
-            "altitude": altitude.size,
-            "cloud_height": cloud_height.size,
-            "backscatter": backscatter.size,
+        backscatter = self._read_direct(
+            mapping["backscatter"]
+        )
+
+        if latitude is None:
+            raise RuntimeError(
+                "HSRL latitude could not be loaded."
+            )
+
+        if longitude is None:
+            raise RuntimeError(
+                "HSRL longitude could not be loaded."
+            )
+
+        if time is None:
+            raise RuntimeError(
+                "HSRL time could not be loaded."
+            )
+
+        if altitude is None:
+            raise RuntimeError(
+                "HSRL altitude could not be loaded."
+            )
+
+        if cloud_height is None:
+            raise RuntimeError(
+                "HSRL cloud height could not be loaded."
+            )
+
+        if backscatter is None:
+            raise RuntimeError(
+                "HSRL backscatter could not be loaded."
+            )
+
+        latitude = np.asarray(latitude).reshape(-1)
+        longitude = np.asarray(longitude).reshape(-1)
+        time = np.asarray(time).reshape(-1)
+        altitude = np.asarray(altitude).reshape(-1)
+        cloud_height = np.asarray(cloud_height).reshape(-1)
+        backscatter = np.asarray(backscatter).reshape(-1)
+
+        if len(latitude) != observation_length:
+            raise RuntimeError(
+                "HSRL latitude length does not match "
+                "the observation length."
+            )
+
+        if len(longitude) != observation_length:
+            raise RuntimeError(
+                "HSRL longitude length does not match "
+                "the observation length."
+            )
+
+        if len(time) != observation_length:
+            raise RuntimeError(
+                "HSRL time length does not match "
+                "the observation length."
+            )
+
+        if len(altitude) != observation_length:
+            raise RuntimeError(
+                "HSRL altitude length does not match "
+                "the observation length."
+            )
+
+        if len(cloud_height) != observation_length:
+            raise RuntimeError(
+                "HSRL cloud height length does not match "
+                "the observation length."
+            )
+
+        if len(backscatter) != observation_length:
+            raise RuntimeError(
+                "HSRL backscatter length does not match "
+                "the observation length."
+            )
+
+        data_vars = {
+            "altitude": (
+                "observation",
+                altitude,
+            ),
+            "cloud_height": (
+                "observation",
+                cloud_height,
+            ),
+            "backscatter": (
+                "observation",
+                backscatter,
+            ),
         }
 
-        print(
-            "\nHSRL variable shapes:"
+        ab_prfl = self._read_direct(
+            mapping["ab_prfl"]
         )
 
-        for name, size in lengths.items():
+        z = self._read_direct(
+            mapping["z"]
+        )
 
-            print(
-                f"    {name}: ({size},)"
-            )
+        if ab_prfl is not None and z is not None:
 
-        observation_length = latitude.size
+            ab_prfl = np.asarray(ab_prfl)
 
-        for name, size in lengths.items():
+            z = np.asarray(z).reshape(-1)
 
-            if size != observation_length:
-
-                raise RuntimeError(
-                    "Conflicting HSRL observation lengths: "
-                    f"latitude={observation_length}, "
-                    f"{name}={size}"
+            if (
+                ab_prfl.ndim == 2
+                and ab_prfl.shape[0] == observation_length
+                and ab_prfl.shape[1] == len(z)
+            ):
+                data_vars["ab_prfl"] = (
+                    ("observation", "level"),
+                    ab_prfl,
                 )
 
-        print(
-            "\nHSRL observation length:",
-            observation_length,
-        )
+        time = np.asarray(time, dtype=np.float64)
+
+        valid_time = np.isfinite(time)
+
+        if np.any(valid_time):
+
+            base_time = np.datetime64(
+                "2022-01-11T00:00:00",
+                "ns",
+            )
+
+            time_datetime = (
+                base_time
+                + (
+                    time * 1_000_000_000
+                ).astype("timedelta64[ns]")
+            )
+
+        else:
+
+            time_datetime = np.full(
+                observation_length,
+                np.datetime64("NaT"),
+                dtype="datetime64[ns]",
+            )
+
+        coords = {
+            "observation": np.arange(
+                observation_length,
+                dtype=np.int64,
+            ),
+            "latitude": (
+                "observation",
+                latitude,
+            ),
+            "longitude": (
+                "observation",
+                longitude,
+            ),
+            "time": (
+                "observation",
+                time_datetime,
+            ),
+        }
+
+        if z is not None:
+
+            z = np.asarray(z).reshape(-1)
+
+            if len(z) > 1:
+
+                coords["level"] = np.arange(
+                    len(z),
+                    dtype=np.int64,
+                )
+
+                coords["z"] = (
+                    "level",
+                    z,
+                )
 
         dataset = xr.Dataset(
+            data_vars=data_vars,
+            coords=coords,
+        )
 
-            data_vars={
-                "latitude": (
-                    ("observation",),
-                    latitude,
+        dataset.attrs.update(
+            {
+                "source": str(self.source),
+                "instrument": "ACTIVATE HSRL2",
+                "observation_length": observation_length,
+                "time_reference": (
+                    "seconds since "
+                    "2022-01-11T00:00:00Z"
                 ),
-                "longitude": (
-                    ("observation",),
-                    longitude,
-                ),
-                "time": (
-                    ("observation",),
-                    time,
-                ),
-                "altitude": (
-                    ("observation",),
-                    altitude,
-                ),
-                "cloud_height": (
-                    ("observation",),
-                    cloud_height,
-                ),
-                "backscatter": (
-                    ("observation",),
-                    backscatter,
-                ),
-            },
-
-            coords={
-                "observation": np.arange(
-                    observation_length
-                ),
-            },
-
-            attrs={
-                "source": str(
-                    self.path
-                ),
-                "instrument": "NASA HSRL-2",
-            },
+            }
         )
 
         return dataset
-
-    def read(
-        self,
-        path: str,
-    ) -> np.ndarray:
-
-        with h5py.File(
-            self.path,
-            "r",
-        ) as file:
-
-            return self._read(
-                file,
-                path,
-            )
