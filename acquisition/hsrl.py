@@ -1,72 +1,63 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import h5py
 import numpy as np
 import xarray as xr
 
-from .base import HDFReader
+from .hdf import HDFReader
 
 
 class HSRLReader(HDFReader):
-    """
-    Reader for NASA ACTIVATE HSRL-2 HDF5 observations.
-    """
 
     VARIABLE_ALIASES = {
         "latitude": [
+            "latitude",
             "gps_lat",
             "lat",
-            "latitude",
             "Latitude",
             "Lat",
+            "/Nav_Data/gps_lat",
         ],
         "longitude": [
+            "longitude",
             "gps_lon",
             "lon",
-            "longitude",
             "Longitude",
             "Lon",
+            "/Nav_Data/gps_lon",
         ],
         "time": [
-            "gps_time",
             "time",
+            "gps_time",
             "Time",
             "UTC_Time",
+            "/Nav_Data/gps_time",
         ],
         "altitude": [
+            "altitude",
             "gps_alt",
             "gps_altitude",
             "alt",
-            "altitude",
             "Altitude",
-            "AircraftAltitude",
             "GPSAltitude",
+            "AircraftAltitude",
+            "/Nav_Data/gps_alt",
         ],
         "cloud_height": [
-            "/DataProducts/cloud_height",
             "cloud_height",
             "CLOUD_HEIGHT",
+            "/DataProducts/cloud_height",
         ],
         "backscatter": [
-            "/DataProducts/bscNorm",
             "bscNorm",
             "Backscatter",
             "backscatter",
             "Aerosol_Backscatter",
             "532_bsc",
+            "/DataProducts/bscNorm",
         ],
-    }
-
-    DIRECT_PATHS = {
-        "latitude": "/Nav_Data/gps_lat",
-        "longitude": "/Nav_Data/gps_lon",
-        "time": "/Nav_Data/gps_time",
-        "altitude": "/Nav_Data/gps_alt",
-        "cloud_height": "/DataProducts/cloud_height",
-        "backscatter": "/DataProducts/bscNorm",
     }
 
     def __init__(
@@ -75,237 +66,90 @@ class HSRLReader(HDFReader):
     ) -> None:
         super().__init__(path)
 
-    @staticmethod
-    def _dataset_exists(
-        file: h5py.File,
-        path: str,
-    ) -> bool:
-        try:
-            file[path]
-            return True
-        except KeyError:
-            return False
-
-    @staticmethod
-    def _read_hdf5(
-        file: h5py.File,
-        path: str,
-    ) -> np.ndarray:
-        return np.asarray(file[path])
-
     def variable_map(self) -> dict[str, str | None]:
-        mapping: dict[str, str | None] = {}
 
-        with h5py.File(self.path, "r") as file:
+        mapping = {}
 
-            for name, direct_path in self.DIRECT_PATHS.items():
+        datasets = set(self.datasets)
 
-                if self._dataset_exists(
-                    file,
-                    direct_path,
-                ):
-                    mapping[name] = direct_path
-                    continue
+        for name, aliases in self.VARIABLE_ALIASES.items():
 
-                mapping[name] = None
+            selected = None
 
-                aliases = self.VARIABLE_ALIASES.get(
-                    name,
-                    [],
-                )
+            for alias in aliases:
 
-                for alias in aliases:
+                if alias.startswith("/"):
 
-                    if alias.startswith("/"):
-                        candidate = alias
-                    else:
-                        candidate = self._find_dataset(
-                            file,
-                            alias,
-                        )
+                    candidate = alias
 
-                    if candidate is not None:
-                        mapping[name] = candidate
-                        break
+                else:
+
+                    candidate = f"/{alias}"
+
+                if candidate in datasets:
+                    selected = candidate
+                    break
+
+                if alias in datasets:
+                    selected = alias
+                    break
+
+            mapping[name] = selected
 
         return mapping
 
-    @staticmethod
-    def _find_dataset(
-        file: h5py.File,
-        name: str,
-    ) -> str | None:
+    def available_variables(self) -> list[str]:
 
-        result: list[str] = []
+        mapping = self.variable_map()
 
-        def visitor(
-            path: str,
-            obj: Any,
-        ) -> None:
-
-            if not isinstance(
-                obj,
-                h5py.Dataset,
-            ):
-                return
-
-            basename = path.split("/")[-1]
-
-            if basename == name:
-                result.append(
-                    "/" + path
-                    if not path.startswith("/")
-                    else path
-                )
-
-        file.visititems(visitor)
-
-        if result:
-            return result[0]
-
-        return None
+        return [
+            name
+            for name, path in mapping.items()
+            if path is not None
+        ]
 
     @staticmethod
-    def _normalise_1d(
+    def _normalise_observation(
         values: np.ndarray,
     ) -> np.ndarray:
 
         values = np.asarray(values)
+
+        if values.ndim == 0:
+            return values.reshape(1)
 
         if values.ndim == 1:
             return values
 
-        if values.ndim == 2 and 1 in values.shape:
-            return values.reshape(-1)
-
-        return values
-
-    @staticmethod
-    def _observation_length(
-        cloud_height: np.ndarray | None,
-        latitude: np.ndarray | None,
-        longitude: np.ndarray | None,
-        time: np.ndarray | None,
-    ) -> int | None:
-
-        if cloud_height is not None:
-
-            values = HSRLReader._normalise_1d(
-                cloud_height,
-            )
-
-            if values.ndim == 1:
-                return int(values.shape[0])
-
-        candidates = (
-            latitude,
-            longitude,
-            time,
-        )
-
-        for values in candidates:
-
-            if values is None:
-                continue
-
-            values = HSRLReader._normalise_1d(
-                values,
-            )
-
-            if values.ndim == 1:
-                return int(values.shape[0])
-
-        return None
-
-    @staticmethod
-    def _prepare_variable(
-        name: str,
-        values: np.ndarray,
-        observation_length: int,
-    ) -> tuple[str, tuple[str, ...], np.ndarray] | None:
-
-        values = np.asarray(values)
-
-        if name in {
-            "latitude",
-            "longitude",
-            "time",
-            "altitude",
-            "cloud_height",
-        }:
-
-            values = HSRLReader._normalise_1d(
-                values,
-            )
-
-            if (
-                values.ndim == 1
-                and len(values) == observation_length
-            ):
-
-                return (
-                    name,
-                    ("observation",),
-                    values,
-                )
-
-        if values.ndim == 1:
-
-            if len(values) == observation_length:
-
-                return (
-                    name,
-                    ("observation",),
-                    values,
-                )
-
-            return None
-
         if values.ndim == 2:
 
-            if values.shape[0] == observation_length:
+            if 1 in values.shape:
+                return values.reshape(-1)
 
-                return (
-                    name,
-                    (
-                        "observation",
-                        "level",
-                    ),
-                    values,
-                )
+        raise ValueError(
+            f"Cannot normalise HSRL observation with shape "
+            f"{values.shape}."
+        )
 
-            if values.shape[1] == observation_length:
+    def _read_hsrl_variable(
+        self,
+        file: h5py.File,
+        path: str | None,
+    ) -> np.ndarray | None:
 
-                values = values.T
-
-                return (
-                    name,
-                    (
-                        "observation",
-                        "level",
-                    ),
-                    values,
-                )
-
+        if path is None:
             return None
 
-        if values.ndim == 3:
-
-            if values.shape[0] == observation_length:
-
-                return (
-                    name,
-                    (
-                        "observation",
-                        "level",
-                        "channel",
-                    ),
-                    values,
-                )
-
+        if path not in file:
             return None
 
-        return None
+        values = np.asarray(
+            file[path][...]
+        )
+
+        return self._normalise_observation(
+            values
+        )
 
     def read_dataset(
         self,
@@ -313,181 +157,182 @@ class HSRLReader(HDFReader):
 
         mapping = self.variable_map()
 
-        print(
-            "\nHSRL variable mapping:"
-        )
+        print("\nHSRL variable mapping:")
 
         for name, path in mapping.items():
             print(
                 f"    {name}: {path}"
             )
 
-        cloud_height = None
-        latitude = None
-        longitude = None
-        time = None
+        required = [
+            "latitude",
+            "longitude",
+            "time",
+            "altitude",
+            "cloud_height",
+        ]
+
+        missing = [
+            name
+            for name in required
+            if mapping.get(name) is None
+        ]
+
+        if missing:
+            raise RuntimeError(
+                "Required HSRL variables not found: "
+                + ", ".join(missing)
+            )
 
         with h5py.File(
             self.path,
             "r",
         ) as file:
 
-            if mapping.get(
-                "cloud_height"
-            ) is not None:
-
-                cloud_height = self._read_hdf5(
-                    file,
-                    mapping["cloud_height"],
-                )
-
-            if mapping.get(
-                "latitude"
-            ) is not None:
-
-                latitude = self._read_hdf5(
-                    file,
-                    mapping["latitude"],
-                )
-
-            if mapping.get(
-                "longitude"
-            ) is not None:
-
-                longitude = self._read_hdf5(
-                    file,
-                    mapping["longitude"],
-                )
-
-            if mapping.get(
-                "time"
-            ) is not None:
-
-                time = self._read_hdf5(
-                    file,
-                    mapping["time"],
-                )
-
-            observation_length = (
-                self._observation_length(
-                    cloud_height,
-                    latitude,
-                    longitude,
-                    time,
-                )
+            latitude = self._read_hsrl_variable(
+                file,
+                mapping["latitude"],
             )
 
-            if observation_length is None:
+            longitude = self._read_hsrl_variable(
+                file,
+                mapping["longitude"],
+            )
 
-                raise RuntimeError(
-                    "Unable to determine HSRL observation length."
-                )
+            time = self._read_hsrl_variable(
+                file,
+                mapping["time"],
+            )
+
+            altitude = self._read_hsrl_variable(
+                file,
+                mapping["altitude"],
+            )
+
+            cloud_height = self._read_hsrl_variable(
+                file,
+                mapping["cloud_height"],
+            )
+
+            backscatter = self._read_hsrl_variable(
+                file,
+                mapping["backscatter"],
+            )
+
+        values = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "time": time,
+            "altitude": altitude,
+            "cloud_height": cloud_height,
+            "backscatter": backscatter,
+        }
+
+        for name, value in values.items():
+
+            if value is None:
+                continue
 
             print(
-                "\nHSRL observation length:",
-                observation_length,
+                f"{name}: shape={value.shape}"
             )
 
-            coordinates: dict[
-                str,
-                tuple[
-                    tuple[str, ...],
-                    np.ndarray,
-                ],
-            ] = {}
+        observation_length = None
 
-            variables: dict[
-                str,
-                tuple[
-                    tuple[str, ...],
-                    np.ndarray,
-                ],
-            ] = {}
+        for name in [
+            "latitude",
+            "longitude",
+            "time",
+            "altitude",
+            "cloud_height",
+            "backscatter",
+        ]:
 
-            for name, path in mapping.items():
+            value = values.get(name)
 
-                if path is None:
-                    continue
+            if value is not None:
 
-                try:
-
-                    values = self._read_hdf5(
-                        file,
-                        path,
+                if value.ndim != 1:
+                    raise RuntimeError(
+                        f"HSRL variable {name} is not 1-D "
+                        f"after normalisation: {value.shape}"
                     )
 
-                except Exception as exc:
+                if value.size > 1:
 
-                    print(
-                        f"Skipping {name}: {exc}"
-                    )
+                    if observation_length is None:
+                        observation_length = value.size
 
-                    continue
+                    elif value.size != observation_length:
+                        raise RuntimeError(
+                            f"Conflicting HSRL observation sizes: "
+                            f"{name}={value.size}, "
+                            f"expected={observation_length}."
+                        )
 
-                prepared = self._prepare_variable(
-                    name,
-                    values,
-                    observation_length,
-                )
+        if observation_length is None:
+            raise RuntimeError(
+                "Unable to determine HSRL observation length."
+            )
 
-                if prepared is None:
+        print(
+            "HSRL observation length:",
+            observation_length,
+        )
 
-                    print(
-                        f"Skipping {name}: "
-                        f"incompatible shape "
-                        f"{np.asarray(values).shape}"
-                    )
+        coordinates = {
+            "observation": np.arange(
+                observation_length
+            )
+        }
 
-                    continue
+        data_vars = {}
 
-                variable_name, dims, data = prepared
+        if latitude is not None:
+            data_vars["latitude"] = (
+                ("observation",),
+                latitude,
+            )
 
-                if variable_name in {
-                    "latitude",
-                    "longitude",
-                    "time",
-                    "altitude",
-                    "cloud_height",
-                }:
+        if longitude is not None:
+            data_vars["longitude"] = (
+                ("observation",),
+                longitude,
+            )
 
-                    coordinates[
-                        variable_name
-                    ] = (
-                        dims,
-                        data,
-                    )
+        if time is not None:
+            data_vars["time"] = (
+                ("observation",),
+                time,
+            )
 
-                else:
+        if altitude is not None:
+            data_vars["altitude"] = (
+                ("observation",),
+                altitude,
+            )
 
-                    variables[
-                        variable_name
-                    ] = (
-                        dims,
-                        data,
-                    )
+        if cloud_height is not None:
+            data_vars["cloud_height"] = (
+                ("observation",),
+                cloud_height,
+            )
+
+        if backscatter is not None:
+            data_vars["backscatter"] = (
+                ("observation",),
+                backscatter,
+            )
 
         dataset = xr.Dataset(
-            data_vars=variables,
+            data_vars=data_vars,
             coords=coordinates,
             attrs={
-                "source": str(self.path),
+                "source": str(
+                    self.path
+                ),
                 "instrument": "NASA HSRL-2",
             },
         )
 
         return dataset
-
-    def read(
-        self,
-        path: str,
-    ) -> np.ndarray:
-
-        with h5py.File(
-            self.path,
-            "r",
-        ) as file:
-
-            return self._read_hdf5(
-                file,
-                path,
-            )
