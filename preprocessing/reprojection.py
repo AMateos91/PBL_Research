@@ -6,8 +6,8 @@ import rioxarray
 import xarray as xr
 
 from .base import Preprocessing
-from ..utils.constants import CRS
-from ..utils.constants import ResamplingMethod
+from ...utils.constants import CRS
+from ...utils.constants import ResamplingMethod
 
 
 class Reprojection(Preprocessing):
