@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 
 from .base import Feature
-from ..utils.constants import Variable
+from ...utils.constants import Variable
 
 
 class Terrain(Feature):
