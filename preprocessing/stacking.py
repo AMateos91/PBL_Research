@@ -4,7 +4,7 @@ import xarray as xr
 
 from .base import Preprocessing
 
-from ..utils.constants import Compatibility
+from ...utils.constants import Compatibility
 
 
 class Stacking(Preprocessing):
