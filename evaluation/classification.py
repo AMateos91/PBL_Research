@@ -9,7 +9,7 @@ from sklearn.metrics import (
     f1_score,
 )
 
-from ..utils.constants import Metric
+from ...utils.constants import Metric
 
 from .evaluator import Evaluator
 
