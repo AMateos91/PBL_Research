@@ -4,7 +4,7 @@ import xarray as xr
 
 from .base import Preprocessing
 
-from ..utils.constants import NormalizationMethod
+from ...utils.constants import NormalizationMethod
 
 
 class Normalization(Preprocessing):
