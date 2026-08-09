@@ -3,7 +3,7 @@ from __future__ import annotations
 import xarray as xr
 
 from .base import Feature
-from ..utils.constants import Variable
+from ...utils.constants import Variable
 
 
 class PBL(Feature):
