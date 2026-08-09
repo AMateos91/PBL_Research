@@ -6,7 +6,7 @@ import xarray as xr
 
 from .base import Preprocessing
 
-from ..utils.constants import ResamplingMethod
+from ...utils.constants import ResamplingMethod
 
 
 class Resampling(Preprocessing):
