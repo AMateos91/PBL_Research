@@ -7,7 +7,7 @@ from skimage.feature import graycomatrix
 from skimage.feature import graycoprops
 
 from .base import Feature
-from ..utils.constants import TextureMetric
+from ...utils.constants import TextureMetric
 
 
 class Texture(Feature):
