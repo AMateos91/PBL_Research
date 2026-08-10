@@ -1,2 +1,10 @@
 All these are the resulting files which have come out from the technical pipeline application.
 Currently working on the final scientific pipeline with all the possible variables/features.
+This technical pipeline:
+-uses the 3 currently available features: AB_prfl, cloud_height, z; 
+-produces 1,113 valid samples; 
+-evaluates a random split (R² ≈ 0.75); 
+-evaluates a chronological split (R² = -29.53); 
+-retains both results and highlights the temporal distribution shift; 
+-includes training → evaluation → visualization → export; 
+-is not yet intended to be the final scientific model.
