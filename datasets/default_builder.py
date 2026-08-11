@@ -5,7 +5,7 @@ import torch
 import xarray as xr
 
 from .base import DatasetBuilder
-from .tensor import TensorDataset
+from torch.utils.data import TensorDataset
 
 
 class DefaultDatasetBuilder(DatasetBuilder):
