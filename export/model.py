@@ -4,7 +4,7 @@ import h5py
 import joblib
 import torch
 
-from ..base import Model
+from ..ml.base import Model
 from ...utils.constants import ExportFormat
 
 from .exporter import Exporter
