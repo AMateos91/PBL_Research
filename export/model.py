@@ -5,7 +5,7 @@ import joblib
 import torch
 
 from ..ml.base import Model
-from ...utils.constants import ExportFormat
+from ..utils.constants import ExportFormat
 
 from .exporter import Exporter
 
