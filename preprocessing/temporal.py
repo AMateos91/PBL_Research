@@ -8,20 +8,20 @@ from ...utils.constants import TemporalMethod
 
 class Temporal(Preprocessing):
 
-def __init__(
-    self,
-    frequency: str | None = None,
-    method: str = TemporalMethod.NEAREST.value,
-    tolerance: str | None = None,
+    def __init__(
+        self,
+        frequency: str | None = None,
+        method: str = TemporalMethod.NEAREST.value,
+        tolerance: str | None = None,
 ):
 
-        super().__init__()
+           super().__init__()
 
-        self.frequency = frequency
+           self.frequency = frequency
 
-        self.method = method
+           self.method = method
 
-        self.tolerance = tolerance
+           self.tolerance = tolerance
 
     def process(
         self,
