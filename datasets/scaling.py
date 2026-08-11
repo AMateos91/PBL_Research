@@ -7,7 +7,7 @@ from sklearn.preprocessing import (
     RobustScaler,
     StandardScaler,
 )
-from ...utils.constants import ScalingMethod
+from ..utils.constants import ScalingMethod
 
 
 class Scaling:
