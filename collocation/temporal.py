@@ -140,7 +140,10 @@ class TemporalCollocator:
                 self.airborne_time: "airborne_time",
             }
         )
-
+        
+        airborne = airborne.dropna(subset=["time"]).sort_values("time")
+        satellite = satellite.dropna(subset=["time"]).sort_values("time")
+       
         result = pd.merge_asof(
             airborne,
             satellite,
