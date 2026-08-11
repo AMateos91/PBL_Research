@@ -9,8 +9,7 @@ import xarray as xr
 
 class TemporalCollocator:
     """
-    Temporal collocation between airborne and satellite
-    observations.
+    Temporal collocation between airborne and satellite observations.
     """
 
     def __init__(
@@ -91,6 +90,14 @@ class TemporalCollocator:
             utc=True,
         )
 
+        satellite = satellite.dropna(
+            subset=[self.satellite_time],
+        )
+
+        airborne = airborne.dropna(
+            subset=[self.airborne_time],
+        )
+
         satellite = satellite.sort_values(
             self.satellite_time,
         ).reset_index(drop=True)
@@ -140,10 +147,7 @@ class TemporalCollocator:
                 self.airborne_time: "airborne_time",
             }
         )
-        
-        airborne = airborne.dropna(subset=["time"]).sort_values("time")
-        satellite = satellite.dropna(subset=["time"]).sort_values("time")
-       
+
         result = pd.merge_asof(
             airborne,
             satellite,
