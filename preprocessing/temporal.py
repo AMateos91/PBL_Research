@@ -4,7 +4,7 @@ import pandas as pd
 import xarray as xr
 
 from .base import Preprocessing
-from ...utils.constants import TemporalMethod
+from ..utils.constants import TemporalMethod
 
 class Temporal(Preprocessing):
 
