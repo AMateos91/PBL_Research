@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from ...utils.constants import Framework
+from ..utils.constants import Framework
 
 
 class Tensor:
