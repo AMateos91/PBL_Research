@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-import numpy as np
 import pandas as pd
 import xarray as xr
 
 
 class TemporalCollocator:
     """
-    Temporal collocation between airborne and satellite observations.
+    Temporal collocation between airborne and satellite
+    observations.
     """
 
     def __init__(
@@ -100,11 +100,15 @@ class TemporalCollocator:
 
         satellite = satellite.sort_values(
             self.satellite_time,
-        ).reset_index(drop=True)
+        ).reset_index(
+            drop=True,
+        )
 
         airborne = airborne.sort_values(
             self.airborne_time,
-        ).reset_index(drop=True)
+        ).reset_index(
+            drop=True,
+        )
 
         return satellite, airborne
 
@@ -113,23 +117,6 @@ class TemporalCollocator:
         satellite: pd.DataFrame | xr.Dataset,
         airborne: pd.DataFrame | xr.Dataset,
     ) -> pd.DataFrame:
-        """
-        Perform temporal collocation between airborne and
-        satellite observations.
-
-        Parameters
-        ----------
-        satellite
-            Satellite observations.
-
-        airborne
-            Airborne observations.
-
-        Returns
-        -------
-        pandas.DataFrame
-            Temporally collocated observations.
-        """
 
         satellite, airborne = self._prepare_inputs(
             satellite,
@@ -169,23 +156,13 @@ class TemporalCollocator:
             drop=True,
         )
 
-        result[
-            "temporal_difference"
-        ] = (
-            result[
-                "airborne_time"
-            ]
-            - result[
-                "satellite_time"
-            ]
+        result["temporal_difference"] = (
+            result["airborne_time"]
+            - result["satellite_time"]
         ).abs()
 
-        result[
-            "temporal_difference_seconds"
-        ] = (
-            result[
-                "temporal_difference"
-            ]
+        result["temporal_difference_seconds"] = (
+            result["temporal_difference"]
             .dt.total_seconds()
         )
 
