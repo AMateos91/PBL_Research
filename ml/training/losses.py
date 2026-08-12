@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch.nn as nn
 
-from ...utils.constants import LossFunction
+from ..utils.constants import LossFunction
 
 
 class Loss:
