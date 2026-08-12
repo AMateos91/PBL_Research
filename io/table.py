@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from ...utils.constants import ExportFormat
+from ..utils.constants import ExportFormat
 
 from .reader import Reader
 
