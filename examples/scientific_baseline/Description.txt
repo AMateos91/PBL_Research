@@ -1,0 +1,5 @@
+All these are the results which have come out after the scientific pipeline application.
+Obviously, the technical integration and validation of the whole project are achieved, but I must admit that the validation and test metrics remain at unacceptably poor levels/values.
+This is of course due to the relationship among the available features and the main scientific target (PBL-MLH). 
+I have tried to explain the evolution of the PBL based only and solely on the ACTIVATE campaign data: hence, we are just standing on the first phase of this research project,
+since our main goal and needs focus on using additional campaigns data to achieve the answer of the main scientific question for this NASA proposal/mission.
