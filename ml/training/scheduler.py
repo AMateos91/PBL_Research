@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch.optim.lr_scheduler as lr_scheduler
 
-from ...utils.constants import Scheduler
+from ..utils.constants import Scheduler
 
 
 class Schedulers:
