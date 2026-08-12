@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from ..base import Model
-from ..utils.constants import EnsembleMethod
+from ...utils.constants import EnsembleMethod
 
 
 class Ensemble:
