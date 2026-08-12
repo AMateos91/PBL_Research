@@ -7,7 +7,7 @@ import joblib
 import torch
 
 from ..base import Model
-from ...utils.constants import ExportFormat
+from ..utils.constants import ExportFormat
 
 from .reader import Reader
 
