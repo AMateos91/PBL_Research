@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch.optim as optim
 
-from ...utils.constants import Optimizer
+from ..utils.constants import Optimizer
 
 
 class Optimizers:
