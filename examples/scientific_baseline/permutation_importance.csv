@@ -1,0 +1,17 @@
+feature,permutation_importance
+temperature_mean_0_3000,358214.7292406462
+pressure_std_0_3000,162456.21916398816
+temperature_std_0_3000,101549.74031391837
+pressure_mean_0_3000,41225.60923941566
+extinction_std_0_3000,25417.715374876123
+extinction_max_0_3000,15330.006385924538
+pressure_gradient_min,2085.7606102477994
+extinction_std_1500_3000,355.9088939264184
+extinction_mean_0_3000,-159.74695328946692
+r1_temperature_std_0_3000,-350.75864333912034
+extinction_mean_1500_3000,-417.29725883552453
+extinction_gradient_min,-603.6615019481338
+r1_temperature_mean_0_3000,-663.7188792764907
+temperature_gradient_min,-970.9024027309672
+r1_temperature_gradient_min,-2034.626972267643
+r1_cloud_height_m,-3091.866072046186

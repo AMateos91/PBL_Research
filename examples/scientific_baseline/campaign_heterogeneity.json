@@ -1,0 +1,14 @@
+{
+  "extinction_mean": 0.004863850831561412,
+  "extinction_std": 0.011102750578166747,
+  "extinction_variance": 0.00012327107040098205,
+  "extinction_range": 0.09593757805365845,
+  "temperature_mean": 262.7074964894747,
+  "temperature_std": 2.398392512143706,
+  "temperature_variance": 5.752286642306997,
+  "temperature_range": 8.573809661865255,
+  "pressure_mean": 0.8443261441042024,
+  "pressure_std": 0.0010783222003795554,
+  "pressure_variance": 1.1627787678314059e-06,
+  "pressure_range": 0.003761441111564623
+}

@@ -1,0 +1,58 @@
+{
+  "best_model": "linear",
+  "validation": {
+    "linear": {
+      "mae": 352.3872932496665,
+      "mse": 166394.52226062355,
+      "rmse": 407.91484682544166,
+      "r2": 0.08032388777777255,
+      "bias": 0.9866869993575941
+    },
+    "ridge": {
+      "mae": 387.85237889051257,
+      "mse": 209993.89546773038,
+      "rmse": 458.25090885641504,
+      "r2": -0.16065340823942198,
+      "bias": 189.8605410585597
+    },
+    "random_forest": {
+      "mae": 427.509197080179,
+      "mse": 272219.15211015375,
+      "rmse": 521.7462526076769,
+      "r2": -0.5045774829832981,
+      "bias": 300.0305057152513
+    }
+  },
+  "test": {
+    "mae": 463.9438347259434,
+    "mse": 300412.3566576564,
+    "rmse": 548.0988566469158,
+    "r2": 0.06658213641471578,
+    "bias": 77.3971579256307
+  },
+  "n_samples": 19393,
+  "n_features": 16,
+  "features": [
+    "temperature_mean_0_3000",
+    "pressure_std_0_3000",
+    "pressure_gradient_min",
+    "pressure_mean_0_3000",
+    "temperature_gradient_min",
+    "temperature_std_0_3000",
+    "extinction_mean_1500_3000",
+    "extinction_max_0_3000",
+    "extinction_mean_0_3000",
+    "extinction_std_0_3000",
+    "extinction_std_1500_3000",
+    "extinction_gradient_min",
+    "r1_cloud_height_m",
+    "r1_temperature_std_0_3000",
+    "r1_temperature_gradient_min",
+    "r1_temperature_mean_0_3000"
+  ],
+  "split": {
+    "train": 13575,
+    "validation": 2908,
+    "test": 2910
+  }
+}
